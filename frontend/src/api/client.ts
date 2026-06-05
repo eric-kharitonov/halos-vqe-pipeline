@@ -28,6 +28,27 @@ export interface PipelineResult {
   handoff_json: string
 }
 
+export interface QaoaCandidate {
+  sequence: string
+  cost: number
+  probability: number
+}
+
+export interface QaoaResult {
+  n_residues: number
+  n_qubits: number
+  reps: number
+  search_space_size: number
+  alphabet: string[]
+  ranked_candidates: QaoaCandidate[]
+  best_sequence: string
+  best_cost: number
+  brute_force_optimum: string
+  brute_force_cost: number
+  found_optimum: boolean
+  convergence_history: number[]
+}
+
 const BASE = '/api'
 
 export async function fetchAtoms(): Promise<AtomMeta[]> {
@@ -41,6 +62,19 @@ export async function runPipeline(atomId: string): Promise<PipelineResult> {
   if (!r.ok) {
     const err = await r.json().catch(() => ({ detail: 'Unknown error' }))
     throw new Error(err.detail ?? 'Pipeline failed')
+  }
+  return r.json()
+}
+
+export async function runQaoaSearch(bindingStrength: number, nResidues: number): Promise<QaoaResult> {
+  const params = new URLSearchParams({
+    binding_strength: String(bindingStrength),
+    n_residues: String(nResidues),
+  })
+  const r = await fetch(`${BASE}/pipeline/qaoa-search?${params}`)
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({ detail: 'Unknown error' }))
+    throw new Error(err.detail ?? 'QAOA search failed')
   }
   return r.json()
 }

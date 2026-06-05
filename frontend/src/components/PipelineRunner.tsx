@@ -3,6 +3,7 @@ import { runPipeline, type PipelineResult } from '../api/client'
 import VQEChart from './VQEChart'
 import BindingSites from './BindingSites'
 import ProteinOutput from './ProteinOutput'
+import QaoaSearch from './QaoaSearch'
 import HandoffExport from './HandoffExport'
 
 type Stage = 'running' | 'done' | 'error'
@@ -71,6 +72,10 @@ export default function PipelineRunner({ atomId, onReset }: Props) {
             bindingResidues={result.binding_residues}
             bindingPositions={result.binding_positions}
             bindingConfidence={result.binding_confidence}
+          />
+          <QaoaSearch
+            bindingStrength={result.binding_confidence}
+            coordinationNumber={result.coordination_number}
           />
           <HandoffExport handoffJson={result.handoff_json} atomId={result.atom_id} />
         </div>
