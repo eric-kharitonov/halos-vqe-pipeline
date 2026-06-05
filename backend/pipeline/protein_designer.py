@@ -51,6 +51,32 @@ def scaffold_binding_residues(binding_residues: list[str]) -> str:
     return _build_sequence(binding_residues)
 
 
+# N-terminal scaffold length before the first binding residue, for foldable constructs.
+_CONSTRUCT_LEAD = 8
+
+
+def build_foldable_construct(
+    binding_residues: list[str], min_length: int = 36
+) -> tuple[str, list[int]]:
+    """Embed the binding motif in a longer α-helical construct suitable for folding.
+
+    The minimal designed motif is only ~8 residues — too short for ESMFold/AlphaFold to
+    give a meaningful structure. This wraps the binding residues (still on one helix face,
+    i, i+4, …) in N- and C-terminal scaffold so the whole construct is long enough to fold.
+
+    Returns (sequence, binding_positions) where binding_positions index into the construct.
+    """
+    cn = len(binding_residues)
+    binding_positions = [_CONSTRUCT_LEAD + i * HELIX_SPACING for i in range(cn)]
+    total_length = max(binding_positions[-1] + _CONSTRUCT_LEAD + 1, min_length)
+
+    sequence = list((SCAFFOLD_HELIX * (total_length // len(SCAFFOLD_HELIX) + 1))[:total_length])
+    for i, pos in enumerate(binding_positions):
+        sequence[pos] = binding_residues[i]
+
+    return "".join(sequence), binding_positions
+
+
 def _geometry_to_notes(geometry: CoordinationGeometry, coord_number: int) -> str:
     notes_map = {
         CoordinationGeometry.LINEAR: "Linear geometry (2 sites). Simple binding mode.",

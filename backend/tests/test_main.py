@@ -17,13 +17,18 @@ def test_list_atoms():
     assert isinstance(atoms, list)
     ids = [a["id"] for a in atoms]
     assert "h2" in ids
-    assert "u238" in ids
+    assert "cs" in ids   # proxy
+    assert "u" in ids    # locked actinide
+    h2 = next(a for a in atoms if a["id"] == "h2")
+    assert h2["tier"] == "real_vqe"
+    assert h2["badge"] == "REAL VQE"
 
 def test_get_single_atom():
     r = client.get("/atoms/h2")
     assert r.status_code == 200
     data = r.json()
     assert data["symbol"] == "H₂"
+    assert data["runs_vqe"] is True
 
 def test_get_unknown_atom_returns_404():
     r = client.get("/atoms/xyz_unknown")
@@ -33,9 +38,23 @@ def test_full_pipeline_h2():
     r = client.get("/pipeline/run/h2", timeout=120)
     assert r.status_code == 200
     data = r.json()
-    assert "ground_state_energy" in data
+    assert data["map_source"] == "vqe"
     assert abs(data["ground_state_energy"] - (-1.1373)) < 0.05
-    assert "fasta" in data
+    assert data["fasta"].startswith(">")
+    assert len(data["foldable_construct"]) >= 36
+
+def test_locked_atom_returns_422():
+    r = client.get("/pipeline/run/u")
+    assert r.status_code == 422
+
+def test_proxy_runs_downstream_from_literature():
+    # Cs⁺ skips VQE but still produces a design, marked source=literature.
+    r = client.get("/pipeline/run/cs", timeout=60)
+    assert r.status_code == 200
+    data = r.json()
+    assert data["map_source"] == "literature"
+    assert data["ground_state_energy"] is None
+    assert data["coordination_number"] == 8
     assert data["fasta"].startswith(">")
 
 

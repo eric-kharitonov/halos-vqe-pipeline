@@ -1,0 +1,31 @@
+{
+  "atom_id": "t",
+  "description": "Toy hydrogenic single-orbital system for tritium (\u00b3H). 2 qubits. Illustrative only \u2014 not a rigorous open-shell calculation.",
+  "reference": "Toy (tritium is electronically hydrogen)",
+  "num_qubits": 2,
+  "nuclear_repulsion_energy": 0.0,
+  "pauli_terms": [
+    {
+      "pauli": "II",
+      "coeff": -0.2
+    },
+    {
+      "pauli": "IZ",
+      "coeff": -0.15
+    },
+    {
+      "pauli": "ZI",
+      "coeff": -0.15
+    },
+    {
+      "pauli": "ZZ",
+      "coeff": 0.05
+    },
+    {
+      "pauli": "XX",
+      "coeff": -0.1
+    }
+  ],
+  "known_ground_state_hartree": -0.466228,
+  "generator": "hand-specified toy Hamiltonian"
+}

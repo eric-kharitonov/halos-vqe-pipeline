@@ -2,13 +2,18 @@ import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from pipeline.atoms import get_atom, list_atoms
+from pipeline.atoms import get_atom, list_atoms, AtomConfig
 from pipeline.hamiltonians import load_hamiltonian
 from pipeline.vqe_runner import run_vqe
-from pipeline.binding_sites import extract_binding_sites
-from pipeline.protein_designer import design_protein, scaffold_binding_residues
+from pipeline.binding_sites import extract_binding_sites, estimate_coordination_from_literature
+from pipeline.protein_designer import (
+    design_protein,
+    scaffold_binding_residues,
+    build_foldable_construct,
+)
 from pipeline.protein_search import run_qaoa_search
 from pipeline.handoff import build_handoff
+from pipeline.folding import fold_sequence, FoldingError
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "hamiltonians")
 
@@ -22,6 +27,27 @@ app.add_middleware(
 )
 
 
+def _serialize_atom(a: AtomConfig) -> dict:
+    return {
+        "id": a.id,
+        "symbol": a.symbol,
+        "name": a.name,
+        "tier": a.tier.value,
+        "badge": a.badge,
+        "num_qubits": a.num_qubits,
+        "qubits_are_estimate": a.qubits_are_estimate,
+        "electrons": a.electrons,
+        "coordination_class": a.coordination_class.value,
+        "typical_coordination_number": a.typical_coordination_number,
+        "donor_preference": a.donor_preference,
+        "known_ground_state_hartree": a.known_ground_state_hartree,
+        "runs_vqe": a.runs_vqe,
+        "is_downstream_only": a.is_downstream_only,
+        "is_locked": a.is_locked,
+        "notes": a.notes,
+    }
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -29,21 +55,7 @@ def health():
 
 @app.get("/atoms")
 def get_atoms():
-    atoms = list_atoms()
-    return [
-        {
-            "id": a.id,
-            "symbol": a.symbol,
-            "name": a.name,
-            "num_qubits": a.num_qubits,
-            "coordination_class": a.coordination_class.value,
-            "typical_coordination_number": a.typical_coordination_number,
-            "donor_preference": a.donor_preference,
-            "is_placeholder": a.is_placeholder,
-            "notes": a.notes,
-        }
-        for a in atoms
-    ]
+    return [_serialize_atom(a) for a in list_atoms()]
 
 
 @app.get("/atoms/{atom_id}")
@@ -52,56 +64,66 @@ def get_single_atom(atom_id: str):
         a = get_atom(atom_id)
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Unknown atom '{atom_id}'")
-    return {
-        "id": a.id,
-        "symbol": a.symbol,
-        "name": a.name,
-        "num_qubits": a.num_qubits,
-        "coordination_class": a.coordination_class.value,
-        "typical_coordination_number": a.typical_coordination_number,
-        "donor_preference": a.donor_preference,
-        "known_ground_state_hartree": a.known_ground_state_hartree,
-        "is_placeholder": a.is_placeholder,
-        "notes": a.notes,
-    }
+    return _serialize_atom(a)
 
 
 @app.get("/pipeline/run/{atom_id}")
 def run_full_pipeline(atom_id: str):
-    """Run the complete VQE -> binding sites -> protein design pipeline."""
+    """Run the pipeline as far as the target's tier allows.
+
+    - runs_vqe targets (H₂, LiH, T): real/toy VQE -> binding map -> design.
+    - downstream-only proxies (Cs⁺, Sr²⁺): SKIP VQE, estimate the binding map from
+      literature coordination chemistry, then design (clearly marked source=literature).
+    - locked targets (actinides): 422 — needs fault-tolerant hardware.
+    """
     try:
         atom = get_atom(atom_id)
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Unknown atom '{atom_id}'")
 
-    if atom.is_placeholder:
+    if atom.is_locked:
         raise HTTPException(
             status_code=422,
-            detail=f"'{atom_id}' is a placeholder — no Hamiltonian available yet. "
-                   "Fault-tolerant quantum hardware required.",
+            detail=f"'{atom.symbol}' is locked — its electronic structure is beyond "
+                   "classical or current quantum simulation. Needs fault-tolerant hardware.",
         )
 
-    try:
-        ham_data = load_hamiltonian(atom_id, data_dir=DATA_DIR)
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+    if atom.runs_vqe:
+        try:
+            ham_data = load_hamiltonian(atom_id, data_dir=DATA_DIR)
+        except FileNotFoundError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        vqe_result = run_vqe(ham_data)
+        coord_result = extract_binding_sites(vqe_result.one_rdm, atom_id=atom_id)
+        ground_state_energy = vqe_result.ground_state_energy
+        convergence_history = vqe_result.convergence_history
+        num_iterations = vqe_result.num_iterations
+    else:
+        # Downstream-only proxy: no VQE, estimate the map from known coordination chemistry.
+        coord_result = estimate_coordination_from_literature(
+            atom_id, atom.typical_coordination_number
+        )
+        ground_state_energy = None
+        convergence_history = []
+        num_iterations = 0
 
-    vqe_result = run_vqe(ham_data)
-    coord_result = extract_binding_sites(vqe_result.one_rdm, atom_id=atom_id)
     protein_result = design_protein(coord_result, donor_preference=atom.donor_preference)
+    construct_seq, construct_positions = build_foldable_construct(protein_result.binding_residues)
     handoff = build_handoff(
         atom_id=atom_id,
-        ground_state_energy=vqe_result.ground_state_energy,
+        ground_state_energy=ground_state_energy,
         coordination=coord_result,
         protein=protein_result,
     )
 
     return {
         "atom_id": atom_id,
-        "ground_state_energy": vqe_result.ground_state_energy,
+        "tier": atom.tier.value,
+        "map_source": coord_result.source,            # "vqe" or "literature"
+        "ground_state_energy": ground_state_energy,
         "known_ground_state": atom.known_ground_state_hartree,
-        "convergence_history": vqe_result.convergence_history,
-        "num_iterations": vqe_result.num_iterations,
+        "convergence_history": convergence_history,
+        "num_iterations": num_iterations,
         "orbital_occupancies": coord_result.orbital_occupancies,
         "empty_orbital_indices": coord_result.empty_orbital_indices,
         "coordination_number": coord_result.coordination_number,
@@ -110,8 +132,31 @@ def run_full_pipeline(atom_id: str):
         "binding_positions": protein_result.binding_positions,
         "sequence": protein_result.sequence,
         "fasta": protein_result.fasta,
+        "foldable_construct": construct_seq,
+        "foldable_binding_positions": construct_positions,
         "binding_confidence": handoff.binding_confidence,
         "handoff_json": handoff.to_json(),
+    }
+
+
+@app.get("/pipeline/fold")
+def fold(sequence: str):
+    """Predict the 3D fold of a sequence with ESMFold; return pLDDT confidence + PDB.
+
+    This is the one genuinely-simulatable bio step (BPD Build 1). High pLDDT means the
+    sequence folds confidently — NOT that the protein binds the metal or works in a cell.
+    """
+    try:
+        result = fold_sequence(sequence)
+    except FoldingError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    return {
+        "sequence": result.sequence,
+        "n_residues": result.n_residues,
+        "mean_plddt": result.mean_plddt,
+        "per_residue_plddt": result.per_residue_plddt,
+        "pdb": result.pdb,
+        "source": result.source,
     }
 
 

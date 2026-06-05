@@ -91,6 +91,32 @@ def build(atom_id, symbols, coords_ang, description, reference,
           f"ground state {gs:.6f} Ha -> {os.path.relpath(path)}")
 
 
+def build_toy(atom_id, terms, description, reference):
+    """Write a hand-specified toy Hamiltonian (no quantum chemistry backend).
+
+    Used for illustrative targets like tritium where a rigorous open-shell
+    calculation isn't the point. The ground state is exact-diagonalized so the
+    VQE test stays self-consistent.
+    """
+    num_qubits = len(terms[0]["pauli"])
+    gs = exact_ground_state(terms, num_qubits)
+    data = {
+        "atom_id": atom_id,
+        "description": description,
+        "reference": reference,
+        "num_qubits": num_qubits,
+        "nuclear_repulsion_energy": 0.0,
+        "pauli_terms": terms,
+        "known_ground_state_hartree": round(gs, 6),
+        "generator": "hand-specified toy Hamiltonian",
+    }
+    os.makedirs(OUT_DIR, exist_ok=True)
+    path = os.path.join(OUT_DIR, f"{atom_id}_sto3g.json")
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2)
+    print(f"  {atom_id}: {num_qubits} qubits (toy), ground state {gs:.6f} Ha -> {os.path.relpath(path)}")
+
+
 def main():
     print("Generating verified Hamiltonians (PennyLane dhf -> Qiskit JSON)...")
     # H2 at 0.735 Angstrom — canonical VQE reference, full 4-qubit STO-3G
@@ -113,6 +139,22 @@ def main():
         reference="Kandala et al. (2017), Nature 549, 242 (system reference)",
         active_electrons=2,
         active_orbitals=3,
+    )
+    # Tritium — toy single-orbital hydrogenic system (2 qubits). Tritium is
+    # electronically hydrogen; this is illustrative, with a small XX coupling so
+    # VQE has a non-trivial gradient to follow.
+    build_toy(
+        atom_id="t",
+        terms=[
+            {"pauli": "II", "coeff": -0.20},
+            {"pauli": "IZ", "coeff": -0.15},
+            {"pauli": "ZI", "coeff": -0.15},
+            {"pauli": "ZZ", "coeff": 0.05},
+            {"pauli": "XX", "coeff": -0.10},
+        ],
+        description="Toy hydrogenic single-orbital system for tritium (³H). 2 qubits. "
+                    "Illustrative only — not a rigorous open-shell calculation.",
+        reference="Toy (tritium is electronically hydrogen)",
     )
     print("Done.")
 

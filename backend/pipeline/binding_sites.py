@@ -42,6 +42,7 @@ class CoordinationResult:
     coordination_number: int
     geometry: CoordinationGeometry
     binding_strength_estimate: float
+    source: str = "vqe"   # "vqe" = quantum-computed; "literature" = proxy estimate
 
 
 def extract_binding_sites(one_rdm: np.ndarray, atom_id: str) -> CoordinationResult:
@@ -71,4 +72,30 @@ def extract_binding_sites(one_rdm: np.ndarray, atom_id: str) -> CoordinationResu
         coordination_number=coord_number,
         geometry=geometry,
         binding_strength_estimate=binding_strength,
+        source="vqe",
+    )
+
+
+def estimate_coordination_from_literature(
+    atom_id: str, coordination_number: int, binding_strength: float = 0.9
+) -> CoordinationResult:
+    """Build a coordination map for a proxy WITHOUT VQE, from known coordination chemistry.
+
+    Used for targets too large to simulate (Cs⁺, Sr²⁺): we know their coordination number
+    and donor preference from the literature, so we can still drive the downstream protein
+    design + folding. The result is explicitly marked `source="literature"` — it is an
+    estimate, not a quantum-computed electron-density map.
+    """
+    # Represent the literature coordination as `coordination_number` empty orbitals
+    # plus two filled ones, so the same downstream code path applies.
+    occupancies = [0.05] * coordination_number + [0.95] * 2
+    geometry = _infer_geometry(coordination_number, atom_id)
+    return CoordinationResult(
+        atom_id=atom_id,
+        orbital_occupancies=occupancies,
+        empty_orbital_indices=list(range(coordination_number)),
+        coordination_number=coordination_number,
+        geometry=geometry,
+        binding_strength_estimate=binding_strength,
+        source="literature",
     )
