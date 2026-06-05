@@ -484,7 +484,7 @@ def load_hamiltonian(atom_id: str, data_dir: str = _DEFAULT_DATA_DIR) -> Hamilto
     if not os.path.exists(path):
         raise FileNotFoundError(
             f"No pre-computed Hamiltonian for '{atom_id}' at {path}. "
-            "Run generate_hamiltonians.py on a Linux/WSL2 machine with PySCF to generate it."
+            "Generate it with `python backend/generate_hamiltonians.py` (requires pennylane)."
         )
     with open(path) as f:
         data = json.load(f)
@@ -532,7 +532,7 @@ git commit -m "feat: Hamiltonian JSON loader for the VQE pipeline"
 - Create: `backend/pipeline/vqe_runner.py`
 - Create: `backend/tests/test_vqe_runner.py`
 
-The runner uses Qiskit 2.x: `qiskit_aer.primitives.Estimator` + `qiskit.circuit.library.EfficientSU2` + `scipy.optimize.minimize`. No qiskit-algorithms needed.
+The runner uses Qiskit 2.x: `qiskit.primitives.StatevectorEstimator` (exact, no shot noise) + `qiskit.circuit.library.EfficientSU2` (decomposed) + `scipy.optimize.minimize`. No qiskit-aer or qiskit-algorithms needed.
 
 - [ ] **Step 1: Write failing tests**
 

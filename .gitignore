@@ -16,3 +16,7 @@ dist/
 .DS_Store
 Thumbs.db
 *.log
+
+# Tooling artifacts
+.playwright-mcp/
+*.png
