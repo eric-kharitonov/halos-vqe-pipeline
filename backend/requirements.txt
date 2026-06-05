@@ -1,0 +1,10 @@
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+pydantic==2.10.3
+numpy>=1.26
+scipy>=1.13
+pytest==8.3.4
+httpx==0.28.1
+
+# Dev/data-generation only (NOT needed at runtime — data already committed):
+#   pennylane>=0.45   # regenerates data/hamiltonians/*.json via generate_hamiltonians.py
