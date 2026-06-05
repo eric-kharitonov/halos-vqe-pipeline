@@ -7,6 +7,7 @@ from pipeline.hamiltonians import load_hamiltonian
 from pipeline.vqe_runner import run_vqe
 from pipeline.binding_sites import extract_binding_sites
 from pipeline.protein_designer import design_protein
+from pipeline.protein_search import run_qaoa_search
 from pipeline.handoff import build_handoff
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "hamiltonians")
@@ -111,4 +112,31 @@ def run_full_pipeline(atom_id: str):
         "fasta": protein_result.fasta,
         "binding_confidence": handoff.binding_confidence,
         "handoff_json": handoff.to_json(),
+    }
+
+
+@app.get("/pipeline/qaoa-search")
+def qaoa_search(binding_strength: float, n_residues: int = 2):
+    """QAOA search over peptide space for the best binder against a binding site.
+
+    Takes the electron-deficiency (binding_strength) from a completed VQE run so it does
+    not re-run VQE. Returns ranked candidates plus the brute-force optimum for validation.
+    """
+    result = run_qaoa_search(binding_strength=binding_strength, n_residues=n_residues)
+    return {
+        "n_residues": result.n_residues,
+        "n_qubits": result.n_qubits,
+        "reps": result.reps,
+        "search_space_size": result.search_space_size,
+        "alphabet": result.alphabet,
+        "ranked_candidates": [
+            {"sequence": c.sequence, "cost": c.cost, "probability": c.probability}
+            for c in result.ranked_candidates
+        ],
+        "best_sequence": result.best_sequence,
+        "best_cost": result.best_cost,
+        "brute_force_optimum": result.brute_force_optimum,
+        "brute_force_cost": result.brute_force_cost,
+        "found_optimum": result.found_optimum,
+        "convergence_history": result.convergence_history,
     }

@@ -37,3 +37,13 @@ def test_full_pipeline_h2():
     assert abs(data["ground_state_energy"] - (-1.1373)) < 0.05
     assert "fasta" in data
     assert data["fasta"].startswith(">")
+
+
+def test_qaoa_search_endpoint():
+    r = client.get("/pipeline/qaoa-search", params={"binding_strength": 0.99, "n_residues": 2}, timeout=120)
+    assert r.status_code == 200
+    data = r.json()
+    assert data["search_space_size"] == 16
+    assert data["found_optimum"] is True
+    assert data["best_cost"] == pytest.approx(data["brute_force_cost"], abs=1e-6)
+    assert len(data["ranked_candidates"]) > 0
