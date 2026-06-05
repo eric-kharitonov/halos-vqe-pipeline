@@ -32,17 +32,28 @@ atom  →  Hamiltonian  →  VQE (Qiskit)  →  1-RDM occupancies  →  binding 
    Optimization Algorithm (`QAOAAnsatz` over a diagonal cost Hamiltonian). Brute-force
    validated to reach the true optimum on the 16/64-candidate spaces. Endpoint
    `GET /pipeline/qaoa-search?binding_strength=…&n_residues=…`.
-5. **Handoff** (`handoff.py`) — bundles VQE energy, geometry, sequence, confidence, and
-   next-step lab instructions into one JSON.
+5. **Structure prediction** (`folding.py`) — folds the designed construct with **ESMFold**
+   (real, no MSA) and returns mean + per-residue pLDDT. Successful folds are cached to
+   `data/folds/` (genuine ESMFold output) so the demo is reliable when the public endpoint
+   is busy. Endpoint `GET /pipeline/fold?sequence=…`. pLDDT is *fold confidence*, not
+   binding or in-cell function.
+6. **Handoff** (`handoff.py`) — bundles VQE energy, geometry, sequence, confidence, the
+   QAOA recommendation, the fold, and next-step lab instructions into one JSON.
 
-## Atoms
+## Targets (tiers)
 
-| Runnable now | Awaiting fault-tolerant hardware (placeholders) |
-|---|---|
-| H₂ (4 qubits), LiH (6 qubits) | Ce³⁺, La³⁺ proxies · U, Pu, Np, Am actinide targets |
+Each target runs as far down the pipeline as today's compute allows:
 
-The actinide configs are registered and the pipeline is parameterized for them — only the
-Hamiltonian input changes when hardware is ready. The code does not change.
+| Tier | Targets | What runs |
+|---|---|---|
+| `REAL VQE` | H₂ | real VQE → binding → design → QAOA → fold |
+| `PRECOMPUTED` | LiH | verified Hamiltonian → full pipeline → fold |
+| `TOY` | T (³H) | toy 2-qubit VQE → downstream → fold |
+| `PROXY` | Cs⁺ (Cs-137), Sr²⁺ (Sr-90) | **no VQE** — design + fold from literature coordination (marked `source=literature`) |
+| `LOCKED` | U, Pu, Np, Am | blocked — needs fault-tolerant hardware |
+
+The frontend is a single-page editorial pipeline: a periodic-table target grid with tier
+badges, then every stage stacked vertically with honesty labels and a live event log.
 
 ---
 
@@ -56,8 +67,10 @@ cd backend
 pip install -r requirements.txt          # fastapi, uvicorn, pydantic, pytest, httpx
 python -m uvicorn main:app --port 8000
 ```
-- `GET /atoms` — list all atoms
-- `GET /pipeline/run/{atom_id}` — run the full pipeline (e.g. `/pipeline/run/h2`)
+- `GET /atoms` — list all targets (with tier/badge metadata)
+- `GET /pipeline/run/{atom_id}` — run the pipeline as far as the tier allows (e.g. `/pipeline/run/h2`, `/pipeline/run/cs`)
+- `GET /pipeline/qaoa-search?...` — QAOA peptide search
+- `GET /pipeline/fold?sequence=...` — ESMFold structure prediction
 
 ### Frontend
 ```bash
