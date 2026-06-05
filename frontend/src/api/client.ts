@@ -2,17 +2,26 @@ export interface AtomMeta {
   id: string
   symbol: string
   name: string
+  tier: string                 // real_vqe | precomputed | toy | proxy | locked
+  badge: string                // REAL VQE | PRECOMPUTED | TOY | PROXY | LOCKED
   num_qubits: number
+  qubits_are_estimate: boolean
+  electrons: number
   coordination_class: string
   typical_coordination_number: number
   donor_preference: string[]
-  is_placeholder: boolean
+  known_ground_state_hartree: number | null
+  runs_vqe: boolean
+  is_downstream_only: boolean
+  is_locked: boolean
   notes: string
 }
 
 export interface PipelineResult {
   atom_id: string
-  ground_state_energy: number
+  tier: string
+  map_source: string           // "vqe" | "literature"
+  ground_state_energy: number | null
   known_ground_state: number | null
   convergence_history: number[]
   num_iterations: number
@@ -24,6 +33,8 @@ export interface PipelineResult {
   binding_positions: number[]
   sequence: string
   fasta: string
+  foldable_construct: string
+  foldable_binding_positions: number[]
   binding_confidence: number
   handoff_json: string
 }
@@ -52,24 +63,35 @@ export interface QaoaResult {
   handoff_block: Record<string, unknown>
 }
 
-const BASE = '/api'
-
-export async function fetchAtoms(): Promise<AtomMeta[]> {
-  const r = await fetch(`${BASE}/atoms`)
-  if (!r.ok) throw new Error('Failed to load atoms')
-  return r.json()
+export interface FoldResult {
+  sequence: string
+  n_residues: number
+  mean_plddt: number
+  per_residue_plddt: number[]
+  pdb: string
+  source: string
 }
 
-export async function runPipeline(atomId: string): Promise<PipelineResult> {
-  const r = await fetch(`${BASE}/pipeline/run/${atomId}`)
+const BASE = '/api'
+
+async function getJson<T>(path: string): Promise<T> {
+  const r = await fetch(`${BASE}${path}`)
   if (!r.ok) {
     const err = await r.json().catch(() => ({ detail: 'Unknown error' }))
-    throw new Error(err.detail ?? 'Pipeline failed')
+    throw new Error(err.detail ?? `Request failed (${r.status})`)
   }
   return r.json()
 }
 
-export async function runQaoaSearch(
+export function fetchAtoms(): Promise<AtomMeta[]> {
+  return getJson<AtomMeta[]>('/atoms')
+}
+
+export function runPipeline(atomId: string): Promise<PipelineResult> {
+  return getJson<PipelineResult>(`/pipeline/run/${atomId}`)
+}
+
+export function runQaoaSearch(
   bindingStrength: number,
   nResidues: number,
   atomId: string,
@@ -81,10 +103,10 @@ export async function runQaoaSearch(
     atom_id: atomId,
     geometry,
   })
-  const r = await fetch(`${BASE}/pipeline/qaoa-search?${params}`)
-  if (!r.ok) {
-    const err = await r.json().catch(() => ({ detail: 'Unknown error' }))
-    throw new Error(err.detail ?? 'QAOA search failed')
-  }
-  return r.json()
+  return getJson<QaoaResult>(`/pipeline/qaoa-search?${params}`)
+}
+
+export function foldSequence(sequence: string): Promise<FoldResult> {
+  const params = new URLSearchParams({ sequence })
+  return getJson<FoldResult>(`/pipeline/fold?${params}`)
 }
