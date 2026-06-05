@@ -10,7 +10,7 @@ function CellSchematic() {
           <circle cx={14 + (i % 2) * 10} cy={y} r="3" fill="#f5a623" />
         </g>
       ))}
-      <text x="8" y="120" className="font-mono" fontSize="8" fill="#5c5c56">MOBILE IONS</text>
+      <text x="8" y="120" className="font-mono" fontSize="8" fill="#9a9a92">MOBILE IONS</text>
       <path d="M30 70 H120" stroke="#3a3a36" strokeWidth="1" strokeDasharray="3 3" />
 
       {/* cell body */}

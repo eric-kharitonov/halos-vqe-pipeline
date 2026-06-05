@@ -81,8 +81,8 @@ export default function StageVqe({ atom, run, status, error, onRun }: Props) {
             <div className="h-44 border border-halos-line bg-halos-surface p-3">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
-                  <XAxis dataKey="i" tick={{ fill: '#5c5c56', fontSize: 10, fontFamily: 'JetBrains Mono' }} />
-                  <YAxis tick={{ fill: '#5c5c56', fontSize: 10, fontFamily: 'JetBrains Mono' }} tickFormatter={(v: number) => v.toFixed(2)} width={48} />
+                  <XAxis dataKey="i" tick={{ fill: '#9a9a92', fontSize: 10, fontFamily: 'JetBrains Mono' }} />
+                  <YAxis tick={{ fill: '#9a9a92', fontSize: 10, fontFamily: 'JetBrains Mono' }} tickFormatter={(v: number) => v.toFixed(2)} width={48} />
                   <Tooltip contentStyle={{ background: '#0f0f0f', border: '1px solid #222', fontFamily: 'JetBrains Mono', fontSize: 11 }} formatter={(v: number) => [`${v.toFixed(6)} Ha`, 'E']} />
                   {run.known_ground_state != null && <ReferenceLine y={run.known_ground_state} stroke="#48e3ea" strokeDasharray="4 4" strokeWidth={1} />}
                   <Line type="monotone" dataKey="e" stroke="#48e3ea" dot={false} strokeWidth={1.5} />

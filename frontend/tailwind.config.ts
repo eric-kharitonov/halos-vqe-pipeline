@@ -16,10 +16,10 @@ export default {
           panel: '#131313',
           border: '#222222',
           line: '#1a1a1a',
-          text: '#e8e6df',
-          dim: '#8a8a82',
-          muted: '#5c5c56',
-          faint: '#3a3a36',
+          text: '#e8e6df',   // primary — warm off-white        ~15.0:1 on bg
+          dim: '#c2c0b6',    // secondary body / paragraphs     ~10.5:1 (was #8a8a82)
+          muted: '#b4b2a8',  // readable micro-labels           ~9.0:1  (was #5c5c56)
+          faint: '#3a3a36',  // DECORATIVE ONLY — never text (hairlines, inactive markers)
           accent: '#48e3ea',
           gold: '#c8a45c',
           warn: '#f5a623',

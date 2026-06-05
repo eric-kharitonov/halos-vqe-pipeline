@@ -81,7 +81,7 @@ export default function App() {
                 {p.log.length === 0 && <div className="text-halos-muted">// no events yet</div>}
                 {p.log.map((e, i) => (
                   <div key={i} className="flex gap-4">
-                    <span className="text-halos-faint">{e.time}</span>
+                    <span className="text-halos-muted">{e.time}</span>
                     <span className="text-halos-dim">{e.text}</span>
                   </div>
                 ))}

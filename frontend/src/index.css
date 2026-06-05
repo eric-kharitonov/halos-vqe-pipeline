@@ -20,7 +20,7 @@ body {
   font-size: 10px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: #5c5c56;
+  color: #b4b2a8;   /* readable micro-label tier (WCAG AA on #0a0a0a) */
 }
 
 /* Subtle scrollbar to match the dark editorial theme. */

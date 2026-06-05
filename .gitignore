@@ -21,3 +21,7 @@ Thumbs.db
 .playwright-mcp/
 *.png
 .claude/
+.gstack/
+
+# Throwaway export for Claude Design design-system upload (regenerate any time)
+design-system-src/
