@@ -52,3 +52,23 @@ def test_h2_linear_uses_two_residues():
     coord = _coord_result(2, CoordinationGeometry.LINEAR, ["O", "N"], atom_id="h2")
     result = design_protein(coord, donor_preference=["O", "N"])
     assert result.num_binding_residues == 2
+
+def test_vqe_fasta_is_stamped_quantum():
+    coord = _coord_result(2, CoordinationGeometry.LINEAR, ["O"])  # default source="vqe"
+    result = design_protein(coord, donor_preference=["O"])
+    assert "generated=quantum-vqe-pipeline" in result.fasta
+
+def test_proxy_fasta_is_not_stamped_quantum():
+    # A literature-sourced proxy must NOT claim it came from VQE.
+    coord = CoordinationResult(
+        atom_id="cs",
+        orbital_occupancies=[0.05] * 8 + [0.95] * 2,
+        empty_orbital_indices=list(range(8)),
+        coordination_number=8,
+        geometry=CoordinationGeometry.SQUARE_ANTIPRISMATIC,
+        binding_strength_estimate=0.9,
+        source="literature",
+    )
+    result = design_protein(coord, donor_preference=["O"])
+    assert "generated=literature-coordination" in result.fasta
+    assert "quantum-vqe" not in result.fasta

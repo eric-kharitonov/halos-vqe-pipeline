@@ -38,8 +38,8 @@ export default function StageProtein({ run, qaoa, qaoaStatus, onQaoa }: Props) {
           {/* Deterministic designed candidate */}
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
-              <div>
-                <div className="label">CONFIDENCE</div>
+              <div title="Mean fractional emptiness (1 − occupancy) of the binding orbitals — an electron-deficiency measure, not a binding probability.">
+                <div className="label">{run.map_source === 'vqe' ? 'ELECTRON DEFICIENCY' : 'DEFICIENCY · LIT. EST.'}</div>
                 <div className="font-mono text-2xl text-halos-accent">{(run.binding_confidence * 100).toFixed(0)}%</div>
               </div>
               <div>

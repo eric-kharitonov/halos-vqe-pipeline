@@ -31,6 +31,8 @@ LOCUS_CONTEXT = (
 )
 PAM = "CGG"  # the NGG PAM present in LOCUS_CONTEXT
 
+VALID_AA = set("ACDEFGHIKLMNPQRSTVWY")
+
 _COMPLEMENT = str.maketrans("ACGT", "TGCA")
 
 
@@ -68,7 +70,16 @@ class PrimeEditPlan:
 
 
 def design_prime_edit(protein: str) -> PrimeEditPlan:
-    gene = codon_optimize(protein)
+    # Validate the protein so a bad input fails loudly instead of silently producing
+    # NNN codons (unknown residues) that would read as a successful design.
+    seq = "".join(protein.split()).upper()
+    if not seq:
+        raise ValueError("Empty protein sequence.")
+    invalid = sorted(set(seq) - VALID_AA)
+    if invalid:
+        raise ValueError(f"Protein has non-standard residues: {invalid}")
+
+    gene = codon_optimize(seq)
 
     # Locate the PAM, derive the protospacer (20 nt immediately 5' of the PAM).
     pam_idx = LOCUS_CONTEXT.find(PAM, 20)
@@ -89,7 +100,7 @@ def design_prime_edit(protein: str) -> PrimeEditPlan:
 
     return PrimeEditPlan(
         locus_name=LOCUS_NAME,
-        protein=protein.upper(),
+        protein=seq,
         gene_dna=gene,
         gene_length_bp=len(gene),
         gc_content=gc_content(gene),

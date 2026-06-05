@@ -40,7 +40,14 @@ export default function App() {
               status={atom ? `LOCKED IN · ${atom.symbol}` : 'AWAITING INPUT'}
               tone={atom ? 'done' : 'active'}
             >
-              <TargetGrid atoms={p.atoms} selectedId={atomId} onSelect={p.selectAtom} />
+              <TargetGrid
+                atoms={p.atoms}
+                selectedId={atomId}
+                onSelect={p.selectAtom}
+                status={p.atomsStatus}
+                error={p.atomsError}
+                onRetry={p.reloadAtoms}
+              />
             </Stage>
 
             {/* 02 — VQE */}

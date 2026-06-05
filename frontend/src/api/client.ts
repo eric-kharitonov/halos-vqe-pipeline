@@ -89,13 +89,28 @@ export interface PrimeEditResult {
 
 const BASE = '/api'
 
-async function getJson<T>(path: string): Promise<T> {
-  const r = await fetch(`${BASE}${path}`)
-  if (!r.ok) {
-    const err = await r.json().catch(() => ({ detail: 'Unknown error' }))
-    throw new Error(err.detail ?? `Request failed (${r.status})`)
+// Default request budget. ESMFold can legitimately take minutes (server retries a flaky
+// public endpoint), so folding overrides this with a much larger ceiling.
+const DEFAULT_TIMEOUT_MS = 30_000
+
+async function getJson<T>(path: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): Promise<T> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const r = await fetch(`${BASE}${path}`, { signal: controller.signal })
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({ detail: 'Unknown error' }))
+      throw new Error(err.detail ?? `Request failed (${r.status})`)
+    }
+    return await r.json()
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      throw new Error(`Request timed out after ${Math.round(timeoutMs / 1000)}s — is the backend running?`)
+    }
+    throw e
+  } finally {
+    clearTimeout(timer)
   }
-  return r.json()
 }
 
 export function fetchAtoms(): Promise<AtomMeta[]> {
@@ -123,7 +138,9 @@ export function runQaoaSearch(
 
 export function foldSequence(sequence: string): Promise<FoldResult> {
   const params = new URLSearchParams({ sequence })
-  return getJson<FoldResult>(`/pipeline/fold?${params}`)
+  // ESMFold's public endpoint retries server-side and can run several minutes on a novel
+  // (uncached) sequence; give it a generous ceiling rather than hanging forever.
+  return getJson<FoldResult>(`/pipeline/fold?${params}`, 300_000)
 }
 
 export function primeEdit(protein: string): Promise<PrimeEditResult> {

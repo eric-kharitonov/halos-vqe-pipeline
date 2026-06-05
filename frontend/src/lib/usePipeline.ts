@@ -23,8 +23,12 @@ function now(): string {
   return new Date().toLocaleTimeString('en-GB')
 }
 
+export type AtomsStatus = 'loading' | 'ready' | 'error'
+
 export function usePipeline() {
   const [atoms, setAtoms] = useState<AtomMeta[]>([])
+  const [atomsStatus, setAtomsStatus] = useState<AtomsStatus>('loading')
+  const [atomsError, setAtomsError] = useState<string | null>(null)
   const [atomId, setAtomId] = useState<string | null>(null)
 
   const [run, setRun] = useState<PipelineResult | null>(null)
@@ -46,9 +50,14 @@ export function usePipeline() {
     setLog(prev => [{ time: now(), text }, ...prev].slice(0, 40))
   }, [])
 
-  useEffect(() => {
-    fetchAtoms().then(setAtoms).catch(() => setAtoms([]))
+  const loadAtoms = useCallback(() => {
+    setAtomsStatus('loading'); setAtomsError(null)
+    fetchAtoms()
+      .then(a => { setAtoms(a); setAtomsStatus('ready') })
+      .catch(e => { setAtoms([]); setAtomsStatus('error'); setAtomsError(e.message) })
   }, [])
+
+  useEffect(() => { loadAtoms() }, [loadAtoms])
 
   const atom = atoms.find(a => a.id === atomId)
 
@@ -120,7 +129,8 @@ export function usePipeline() {
   }, [addLog])
 
   return {
-    atoms, atom, atomId, selectAtom,
+    atoms, atomsStatus, atomsError, reloadAtoms: loadAtoms,
+    atom, atomId, selectAtom,
     run, runStatus, runError, doRun,
     qaoa, qaoaStatus, doQaoa,
     fold, foldStatus, foldError, doFold,

@@ -36,6 +36,14 @@ class FoldingError(RuntimeError):
     """ESMFold could not fold the sequence (bad input or service unavailable)."""
 
 
+class InvalidSequenceError(FoldingError):
+    """The input sequence itself is invalid (empty, non-standard residues, too long).
+
+    A subclass of FoldingError so existing callers still catch it, but distinct so the API
+    can return 400 (client error) instead of 502 (upstream service unavailable).
+    """
+
+
 @dataclass
 class FoldResult:
     sequence: str
@@ -101,12 +109,12 @@ def fold_sequence(sequence: str, timeout: int = 120, use_cache: bool = True) -> 
     """
     seq = "".join(sequence.split()).upper()
     if not seq:
-        raise FoldingError("Empty sequence.")
+        raise InvalidSequenceError("Empty sequence.")
     bad = set(seq) - VALID_AA
     if bad:
-        raise FoldingError(f"Sequence has non-standard residues: {sorted(bad)}")
+        raise InvalidSequenceError(f"Sequence has non-standard residues: {sorted(bad)}")
     if len(seq) > 400:
-        raise FoldingError("Sequence too long for the public ESMFold endpoint (>400).")
+        raise InvalidSequenceError("Sequence too long for the public ESMFold endpoint (>400).")
 
     if use_cache:
         cached = _load_cache(seq)

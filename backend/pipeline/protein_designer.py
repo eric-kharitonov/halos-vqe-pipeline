@@ -109,8 +109,9 @@ def design_protein(
     """
     Design a metal-binding protein sequence for the given coordination result.
     Binding residues are chosen for the atom's electron-deficiency profile and placed
-    at helix-face positions matching the required coordination geometry — so binding
-    is by design, not by chance.
+    at helix-face positions matching the required coordination geometry — so the design is
+    deterministic and reproducible (the same map gives the same protein). Whether that
+    protein actually binds the metal is a wet-lab outcome, not a guarantee of this step.
     """
     binding_residues = _pick_binding_residues(coord_result.coordination_number, donor_preference)
     sequence = _build_sequence(binding_residues)
@@ -118,11 +119,14 @@ def design_protein(
     cn = len(binding_residues)
     binding_positions = [i * HELIX_SPACING for i in range(cn)]
 
+    # Stamp the FASTA with the *true* provenance of the binding map: a quantum VQE run,
+    # or a literature-coordination estimate (proxies). Never claim VQE for a proxy.
+    provenance = "quantum-vqe-pipeline" if coord_result.source == "vqe" else "literature-coordination"
     fasta_header = (
         f">HALOS_{coord_result.atom_id.upper()}_binding_protein | "
         f"coord={coord_result.geometry.value} | "
         f"n={cn} | "
-        f"generated=quantum-vqe-pipeline"
+        f"generated={provenance}"
     )
     fasta = f"{fasta_header}\n{sequence}"
 

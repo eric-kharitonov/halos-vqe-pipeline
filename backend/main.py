@@ -13,7 +13,7 @@ from pipeline.protein_designer import (
 )
 from pipeline.protein_search import run_qaoa_search
 from pipeline.handoff import build_handoff
-from pipeline.folding import fold_sequence, FoldingError
+from pipeline.folding import fold_sequence, FoldingError, InvalidSequenceError
 from pipeline.prime_editing import design_prime_edit
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "hamiltonians")
@@ -149,6 +149,9 @@ def fold(sequence: str):
     """
     try:
         result = fold_sequence(sequence)
+    except InvalidSequenceError as e:
+        # Bad input is the client's fault, not the upstream service's.
+        raise HTTPException(status_code=400, detail=str(e))
     except FoldingError as e:
         raise HTTPException(status_code=502, detail=str(e))
     return {
@@ -169,7 +172,10 @@ def prime_edit(protein: str):
     against a representative locus, and returns the before -> after DNA. This is the
     *design* of the edit (computable) — not a prediction of whether the cell survives.
     """
-    plan = design_prime_edit(protein)
+    try:
+        plan = design_prime_edit(protein)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     return {
         "locus_name": plan.locus_name,
         "protein": plan.protein,

@@ -58,6 +58,42 @@ def test_proxy_runs_downstream_from_literature():
     assert data["fasta"].startswith(">")
 
 
+def test_full_pipeline_tritium_toy_vqe():
+    # Tritium is the toy 2-qubit VQE tier — runs a real (illustrative) VQE.
+    r = client.get("/pipeline/run/t", timeout=120)
+    assert r.status_code == 200
+    data = r.json()
+    assert data["map_source"] == "vqe"
+    assert abs(data["ground_state_energy"] - (-0.466)) < 0.05
+    assert data["fasta"].startswith(">")
+
+
+def test_fold_bad_input_returns_400():
+    # Non-standard residues are the client's fault -> 400, not a 502 (service) error.
+    r = client.get("/pipeline/fold", params={"sequence": "ZZZ123"})
+    assert r.status_code == 400
+
+
+def test_prime_edit_valid_returns_200():
+    r = client.get("/pipeline/prime-edit", params={"protein": "DEALKALAE"})
+    assert r.status_code == 200
+    data = r.json()
+    assert data["gene_dna"].startswith("ATG")
+    assert data["gene_dna"].endswith("TGA")
+
+
+def test_prime_edit_bad_input_returns_400():
+    r = client.get("/pipeline/prime-edit", params={"protein": "DEZ1"})
+    assert r.status_code == 400
+
+
+def test_proxy_fasta_not_labelled_quantum():
+    # The downloaded design for a proxy must not claim a VQE provenance it never had.
+    r = client.get("/pipeline/run/cs", timeout=60)
+    assert r.status_code == 200
+    assert "generated=literature-coordination" in r.json()["fasta"]
+
+
 def test_qaoa_search_endpoint():
     r = client.get("/pipeline/qaoa-search", params={"binding_strength": 0.99, "n_residues": 2}, timeout=120)
     assert r.status_code == 200

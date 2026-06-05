@@ -1,5 +1,6 @@
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+import pytest
 from pipeline.prime_editing import (
     codon_optimize,
     reverse_complement,
@@ -34,3 +35,14 @@ def test_design_prime_edit_inserts_gene():
     assert plan.gene_dna not in plan.before     # but not present before the edit
     assert len(plan.after) == len(plan.before) + plan.gene_length_bp
     assert len(plan.pbs) == 13
+
+
+def test_design_prime_edit_rejects_nonstandard_residues():
+    # Unknown residues must fail loudly, not silently emit NNN codons.
+    with pytest.raises(ValueError):
+        design_prime_edit("DEZ1")
+
+
+def test_design_prime_edit_rejects_empty():
+    with pytest.raises(ValueError):
+        design_prime_edit("   ")

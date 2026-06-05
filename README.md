@@ -5,9 +5,11 @@ electron-deficient "weak links" (empty coordination orbitals) → **design a pro
 with the right metal-coordinating residues, in the right geometry, to bind those sites →
 export a bio-team handoff package for prime-editing into *D. radiodurans*.
 
-The binding is **by design, not by luck**: the coordinating residues are chosen from the
-quantum-computed orbital occupancies and placed on an α-helix face matching the
-coordination geometry. Same input → same output, every time.
+The **design is deterministic, not random**: the coordinating residues are chosen from the
+binding map's orbital occupancies and placed on an α-helix face matching the coordination
+geometry, so the same target gives the same protein every time. "Deterministic" describes the
+*design procedure* — whether the resulting protein actually binds the metal and crystallizes it
+is a wet-lab question this tool does not claim to answer.
 
 TKS Moonshot — Eric Kharitonov, 2025-26.
 
@@ -37,8 +39,14 @@ atom  →  Hamiltonian  →  VQE (Qiskit)  →  1-RDM occupancies  →  binding 
    `data/folds/` (genuine ESMFold output) so the demo is reliable when the public endpoint
    is busy. Endpoint `GET /pipeline/fold?sequence=…`. pLDDT is *fold confidence*, not
    binding or in-cell function.
-6. **Handoff** (`handoff.py`) — bundles VQE energy, geometry, sequence, confidence, the
-   QAOA recommendation, the fold, and next-step lab instructions into one JSON.
+6. **Prime-edit design** (`prime_editing.py`) — codon-optimizes the protein's gene for
+   *D. radiodurans* (high-GC) and designs a simplified pegRNA (spacer/PAM/PBS/RTT) against a
+   representative neutral locus, returning the before → after DNA. Endpoint
+   `GET /pipeline/prime-edit?protein=…`. This is the *design of the edit*, not a prediction
+   that the cell survives or expresses it.
+7. **Handoff** (`handoff.py`) — bundles the binding map (with its `source`: VQE energy or
+   literature estimate), geometry, sequence, the electron-deficiency measure, the QAOA
+   recommendation, the fold, and next-step lab instructions into one JSON.
 
 ## Targets (tiers)
 
@@ -55,22 +63,36 @@ Each target runs as far down the pipeline as today's compute allows:
 The frontend is a single-page editorial pipeline: a periodic-table target grid with tier
 badges, then every stage stacked vertically with honesty labels and a live event log.
 
+## Repo layout
+
+| Path | What it is |
+|---|---|
+| `backend/` | FastAPI app + the real pipeline (VQE, QAOA, folding, prime-edit, handoff) |
+| `frontend/` | The live React/Vite app — **this is the real UI** (`npm run dev`) |
+| `data/` | Committed Hamiltonians (`hamiltonians/`) and cached ESMFold structures (`folds/`) |
+| `docs/` | PID / BPD / QPD project documents |
+| `index.html` + `assets/` (root) | The original Perplexity-exported **design mockup** — a static reference only, not wired to the backend. Superseded by `frontend/`; kept for visual provenance. |
+
 ---
 
 ## Run it
 
-**Prerequisites:** Python 3.13 with `qiskit` + `qiskit-aer` installed globally; Node 20+.
+**Prerequisites:** Python 3.13 with `qiskit` installed globally (the runtime uses Qiskit's
+`StatevectorEstimator` — **not** `qiskit-aer`, which can't execute the `EfficientSU2` ansatz
+directly); Node 20+.
 
 ### Backend
 ```bash
 cd backend
-pip install -r requirements.txt          # fastapi, uvicorn, pydantic, pytest, httpx
+pip install -r requirements.txt          # fastapi, uvicorn, pydantic, numpy, scipy, pytest, httpx
+pip install qiskit                        # not pinned in requirements; installed globally
 python -m uvicorn main:app --port 8000
 ```
 - `GET /atoms` — list all targets (with tier/badge metadata)
 - `GET /pipeline/run/{atom_id}` — run the pipeline as far as the tier allows (e.g. `/pipeline/run/h2`, `/pipeline/run/cs`)
 - `GET /pipeline/qaoa-search?...` — QAOA peptide search
-- `GET /pipeline/fold?sequence=...` — ESMFold structure prediction
+- `GET /pipeline/fold?sequence=...` — ESMFold structure prediction (400 on bad input, 502 if the service is down)
+- `GET /pipeline/prime-edit?protein=...` — prime-edit / pegRNA design (400 on a non-standard sequence)
 
 ### Frontend
 ```bash
@@ -84,7 +106,8 @@ protein, and download the handoff package.
 ### Tests
 ```bash
 cd backend
-python -m pytest tests/ -v      # 35 tests; the VQE tests take ~2 min
+python -m pytest -m "not network"   # 71 offline tests (~4 min; the VQE/QAOA tests dominate)
+python -m pytest tests/ -v          # +1 live ESMFold test (skips if the service is down)
 ```
 
 ---
