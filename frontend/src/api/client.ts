@@ -72,6 +72,21 @@ export interface FoldResult {
   source: string
 }
 
+export interface PrimeEditResult {
+  locus_name: string
+  protein: string
+  gene_dna: string
+  gene_length_bp: number
+  gc_content: number
+  spacer: string
+  pam: string
+  pbs: string
+  rtt: string
+  before: string
+  after: string
+  insert_index: number
+}
+
 const BASE = '/api'
 
 async function getJson<T>(path: string): Promise<T> {
@@ -109,4 +124,9 @@ export function runQaoaSearch(
 export function foldSequence(sequence: string): Promise<FoldResult> {
   const params = new URLSearchParams({ sequence })
   return getJson<FoldResult>(`/pipeline/fold?${params}`)
+}
+
+export function primeEdit(protein: string): Promise<PrimeEditResult> {
+  const params = new URLSearchParams({ protein })
+  return getJson<PrimeEditResult>(`/pipeline/prime-edit?${params}`)
 }

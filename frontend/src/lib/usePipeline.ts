@@ -4,10 +4,12 @@ import {
   runPipeline,
   runQaoaSearch,
   foldSequence,
+  primeEdit,
   type AtomMeta,
   type PipelineResult,
   type QaoaResult,
   type FoldResult,
+  type PrimeEditResult,
 } from '../api/client'
 
 export type Status = 'idle' | 'running' | 'done' | 'error'
@@ -35,6 +37,9 @@ export function usePipeline() {
   const [fold, setFold] = useState<FoldResult | null>(null)
   const [foldStatus, setFoldStatus] = useState<Status>('idle')
   const [foldError, setFoldError] = useState<string | null>(null)
+
+  const [edit, setEdit] = useState<PrimeEditResult | null>(null)
+  const [editStatus, setEditStatus] = useState<Status>('idle')
 
   const [log, setLog] = useState<LogEntry[]>([])
   const addLog = useCallback((text: string) => {
@@ -95,11 +100,22 @@ export function usePipeline() {
       .catch(e => { setFoldError(e.message); setFoldStatus('error'); addLog(`fold failed · ${e.message}`) })
   }, [run, addLog])
 
+  const doPrimeEdit = useCallback(() => {
+    if (!run) return
+    setEditStatus('running')
+    addLog('prime-edit design started')
+    // Edit the gene for the deployable construct (the same protein we folded).
+    primeEdit(run.foldable_construct)
+      .then(r => { setEdit(r); setEditStatus('done'); addLog(`pegRNA designed · ${r.gene_length_bp} bp gene · ${r.gc_content}% GC`) })
+      .catch(() => setEditStatus('error'))
+  }, [run, addLog])
+
   const reset = useCallback(() => {
     setAtomId(null)
     setRun(null); setRunStatus('idle'); setRunError(null)
     setQaoa(null); setQaoaStatus('idle')
     setFold(null); setFoldStatus('idle'); setFoldError(null)
+    setEdit(null); setEditStatus('idle')
     addLog('pipeline reset')
   }, [addLog])
 
@@ -108,6 +124,7 @@ export function usePipeline() {
     run, runStatus, runError, doRun,
     qaoa, qaoaStatus, doQaoa,
     fold, foldStatus, foldError, doFold,
+    edit, editStatus, doPrimeEdit,
     log, reset,
   }
 }

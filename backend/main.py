@@ -14,6 +14,7 @@ from pipeline.protein_designer import (
 from pipeline.protein_search import run_qaoa_search
 from pipeline.handoff import build_handoff
 from pipeline.folding import fold_sequence, FoldingError
+from pipeline.prime_editing import design_prime_edit
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "hamiltonians")
 
@@ -157,6 +158,31 @@ def fold(sequence: str):
         "per_residue_plddt": result.per_residue_plddt,
         "pdb": result.pdb,
         "source": result.source,
+    }
+
+
+@app.get("/pipeline/prime-edit")
+def prime_edit(protein: str):
+    """Design the prime edit that writes the protein's gene into D. radiodurans.
+
+    Codon-optimizes the protein for the GC-rich genome, designs a (simplified) pegRNA
+    against a representative locus, and returns the before -> after DNA. This is the
+    *design* of the edit (computable) — not a prediction of whether the cell survives.
+    """
+    plan = design_prime_edit(protein)
+    return {
+        "locus_name": plan.locus_name,
+        "protein": plan.protein,
+        "gene_dna": plan.gene_dna,
+        "gene_length_bp": plan.gene_length_bp,
+        "gc_content": plan.gc_content,
+        "spacer": plan.spacer,
+        "pam": plan.pam,
+        "pbs": plan.pbs,
+        "rtt": plan.rtt,
+        "before": plan.before,
+        "after": plan.after,
+        "insert_index": plan.insert_index,
     }
 
 

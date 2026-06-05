@@ -58,8 +58,8 @@ export default function App() {
             {/* 06 — Bio handoff */}
             <StageHandoff run={run} qaoa={p.qaoa} fold={p.fold} />
 
-            {/* 07 — Chassis */}
-            <StageChassis run={run} />
+            {/* 07 — Chassis (prime-edit design) */}
+            <StageChassis run={run} edit={p.edit} editStatus={p.editStatus} onPrimeEdit={p.doPrimeEdit} />
 
             {/* 08 — Biomineralization */}
             <StageBiomin run={run} />

@@ -1,4 +1,5 @@
 import Stage from './Stage'
+import Protein3D from './Protein3D'
 import type { PipelineResult, FoldResult } from '../api/client'
 import type { Status } from '../lib/usePipeline'
 
@@ -92,18 +93,24 @@ export default function StageFold({ run, fold, status, error, onFold }: Props) {
                 </div>
               </div>
 
-              <div>
-                <div className="label mb-2">PER-RESIDUE pLDDT</div>
-                <div className="flex h-12 items-end gap-px">
-                  {fold.per_residue_plddt.map((v, i) => (
-                    <div key={i} className="flex-1" style={{ height: `${v}%`, backgroundColor: plddtColor(v), minWidth: '2px' }} title={`res ${i + 1}: ${v}`} />
-                  ))}
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div>
+                  <div className="label mb-2">PER-RESIDUE pLDDT</div>
+                  <div className="flex h-12 items-end gap-px">
+                    {fold.per_residue_plddt.map((v, i) => (
+                      <div key={i} className="flex-1" style={{ height: `${v}%`, backgroundColor: plddtColor(v), minWidth: '2px' }} title={`res ${i + 1}: ${v}`} />
+                    ))}
+                  </div>
+                  <div className="mt-2 flex gap-4 font-mono text-[9px] tracking-widest text-halos-muted">
+                    <span><span style={{ color: '#48e3ea' }}>■</span> ≥90</span>
+                    <span><span style={{ color: '#6ad08f' }}>■</span> 70–90</span>
+                    <span><span style={{ color: '#f5a623' }}>■</span> 50–70</span>
+                    <span><span style={{ color: '#e84848' }}>■</span> &lt;50</span>
+                  </div>
                 </div>
-                <div className="mt-2 flex gap-4 font-mono text-[9px] tracking-widest text-halos-muted">
-                  <span><span style={{ color: '#48e3ea' }}>■</span> ≥90</span>
-                  <span><span style={{ color: '#6ad08f' }}>■</span> 70–90</span>
-                  <span><span style={{ color: '#f5a623' }}>■</span> 50–70</span>
-                  <span><span style={{ color: '#e84848' }}>■</span> &lt;50</span>
+                <div>
+                  <div className="label mb-2">PREDICTED STRUCTURE · 3D</div>
+                  <Protein3D pdb={fold.pdb} />
                 </div>
               </div>
             </div>
