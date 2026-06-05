@@ -76,9 +76,12 @@ numpy>=1.26
 scipy>=1.13
 pytest==8.3.4
 httpx==0.28.1
+
+# Dev/data-generation only (NOT needed at runtime — data already committed):
+#   pennylane>=0.45   # regenerates data/hamiltonians/*.json via generate_hamiltonians.py
 ```
 
-Note: qiskit 2.4.1 and qiskit-aer 0.17.2 are already installed globally. Do NOT add them to requirements.txt — they would install incompatible versions.
+Note: qiskit 2.4.1 and qiskit-aer 0.17.2 are already installed globally, as is pennylane 0.45 (used only by the offline Hamiltonian generator). Do NOT add qiskit to requirements.txt — it would risk installing an incompatible version. The runtime VQE pipeline uses only `qiskit` core (`qiskit.primitives.StatevectorEstimator`), not qiskit-aer.
 
 - [ ] **Step 2: Install dependencies**
 
@@ -152,14 +155,14 @@ from pipeline.atoms import AtomConfig, get_atom, list_atoms, CoordinationClass
 
 def test_get_h2():
     atom = get_atom("h2")
-    assert atom.symbol == "H2"
-    assert atom.num_qubits == 2
+    assert atom.symbol == "H₂"
+    assert atom.num_qubits == 4
     assert atom.known_ground_state_hartree == pytest.approx(-1.1373, abs=0.01)
 
 def test_get_lih():
     atom = get_atom("lih")
     assert atom.symbol == "LiH"
-    assert atom.num_qubits == 4
+    assert atom.num_qubits == 6
 
 def test_list_atoms_includes_proxies():
     atoms = list_atoms()
@@ -231,26 +234,27 @@ H2 = _register(AtomConfig(
     id="h2",
     symbol="H₂",
     name="Hydrogen (H2)",
-    num_qubits=2,
+    num_qubits=4,
     coordination_class=CoordinationClass.DIATOMIC,
     typical_coordination_number=2,
     donor_preference=["O", "N"],
     known_ground_state_hartree=-1.1373,
     hamiltonian_file="h2_sto3g.json",
-    notes="Reference molecule. VQE result ~-1.1373 Hartree at R=0.735 Å, STO-3G.",
+    notes="Reference molecule. VQE result ~-1.1373 Hartree at R=0.735 Å, STO-3G, "
+          "full 4-qubit Jordan-Wigner.",
 ))
 
 LIH = _register(AtomConfig(
     id="lih",
     symbol="LiH",
     name="Lithium Hydride (LiH)",
-    num_qubits=4,
+    num_qubits=6,
     coordination_class=CoordinationClass.ALKALI,
     typical_coordination_number=4,
     donor_preference=["O", "N"],
-    known_ground_state_hartree=-7.8823,
+    known_ground_state_hartree=-7.8631,
     hamiltonian_file="lih_sto3g.json",
-    notes="Proxy for alkali-like coordination. Li⁺ end is the coordination site.",
+    notes="Proxy for alkali-like coordination. Active space (2e, 3 orbitals), 6 qubits.",
 ))
 
 # --- Actinide proxy metals (safe, non-radioactive lab validation) ---
@@ -382,70 +386,22 @@ git commit -m "feat: atom registry with H2, LiH, proxies, and actinide placehold
 - Create: `backend/pipeline/hamiltonians.py`
 - Create: `backend/tests/test_hamiltonians.py`
 
-Background: H2 in STO-3G reduces to 2 qubits after applying Z₂ symmetry reduction and particle number conservation. The Hamiltonian is:
-```
-H = g₀·II + g₁·IZ + g₂·ZI + g₃·ZZ + g₄·XX + g₅·YY
-```
-with values from O'Malley et al. (2016), Physical Review X.
+**IMPORTANT — the data files already exist.** The controller has already generated and committed verified Hamiltonian JSON files using `backend/generate_hamiltonians.py` (PennyLane's pure-Python `dhf` backend — PySCF has no Windows wheel). Do NOT hand-write coefficients. The committed files are:
+- `data/hamiltonians/h2_sto3g.json` — 4 qubits, 15 terms, ground state **-1.137306 Ha**
+- `data/hamiltonians/lih_sto3g.json` — 6 qubits (active space 2e/3orb), 62 terms, ground state **-7.863078 Ha**
 
-LiH in STO-3G (with 2 frozen core orbitals, reduced to 4 qubits) values from Kandala et al. (2017), Nature.
+Both have been exact-diagonalized and round-trip-verified through Qiskit `SparsePauliOp`. Nuclear repulsion is folded into the identity term, so `nuclear_repulsion_energy` is `0.0` and the operator's lowest eigenvalue is the total energy. Your job in this task is ONLY to write the loader and its tests against these existing files.
 
-- [ ] **Step 1: Create H2 Hamiltonian JSON**
+- [ ] **Step 1: Confirm the data files exist (do not recreate them)**
 
-```json
-{
-  "atom_id": "h2",
-  "description": "H2 at R=0.735 Angstrom, STO-3G basis, Jordan-Wigner + Z2 symmetry reduction",
-  "reference": "O'Malley et al. (2016), Physical Review X 6, 031007",
-  "num_qubits": 2,
-  "nuclear_repulsion_energy": 0.7199689944489797,
-  "pauli_terms": [
-    {"pauli": "II", "coeff": -1.0523732},
-    {"pauli": "IZ", "coeff":  0.3979374},
-    {"pauli": "ZI", "coeff": -0.3979374},
-    {"pauli": "ZZ", "coeff": -0.0112801},
-    {"pauli": "XX", "coeff":  0.1809270},
-    {"pauli": "YY", "coeff":  0.1809270}
-  ],
-  "known_ground_state_hartree": -1.1373060,
-  "known_hf_energy_hartree": -1.1175942
-}
+```bash
+cd "C:\work\HALOS VQE Pipeline Tool"
+python -c "import json; d=json.load(open('data/hamiltonians/h2_sto3g.json')); print(d['num_qubits'], len(d['pauli_terms']), d['known_ground_state_hartree'])"
 ```
 
-Save to: `data/hamiltonians/h2_sto3g.json`
+Expected: `4 15 -1.137306`. If the files are missing, regenerate with `python backend/generate_hamiltonians.py` (requires `pip install pennylane`).
 
-- [ ] **Step 2: Create LiH Hamiltonian JSON**
-
-```json
-{
-  "atom_id": "lih",
-  "description": "LiH at R=1.595 Angstrom, STO-3G basis, Jordan-Wigner, 2 frozen core orbitals, 4 active qubits",
-  "reference": "Kandala et al. (2017), Nature 549, 242–246",
-  "num_qubits": 4,
-  "nuclear_repulsion_energy": 0.9924119926298821,
-  "pauli_terms": [
-    {"pauli": "IIII", "coeff": -8.2171},
-    {"pauli": "IIIZ", "coeff":  0.1716},
-    {"pauli": "IIZI", "coeff": -0.2233},
-    {"pauli": "IZII", "coeff":  0.1716},
-    {"pauli": "ZIII", "coeff": -0.2233},
-    {"pauli": "IIZZ", "coeff":  0.1208},
-    {"pauli": "IZIZ", "coeff":  0.1687},
-    {"pauli": "IZZI", "coeff":  0.1659},
-    {"pauli": "ZIIZ", "coeff":  0.1659},
-    {"pauli": "ZIZI", "coeff":  0.1687},
-    {"pauli": "ZZII", "coeff":  0.1745},
-    {"pauli": "XXYY", "coeff": -0.0453},
-    {"pauli": "XYYX", "coeff":  0.0453},
-    {"pauli": "YXXY", "coeff":  0.0453},
-    {"pauli": "YYXX", "coeff": -0.0453}
-  ],
-  "known_ground_state_hartree": -7.8823,
-  "known_hf_energy_hartree": -7.8621
-}
-```
-
-Save to: `data/hamiltonians/lih_sto3g.json`
+- [ ] **Step 2: (No action — JSON already committed.)**
 
 - [ ] **Step 3: Write failing tests**
 
@@ -467,16 +423,22 @@ def test_load_h2_returns_hamiltonian_data():
 
 def test_h2_has_correct_qubit_count():
     h = load_hamiltonian("h2", data_dir=DATA_DIR)
-    assert h.operator.num_qubits == 2
+    assert h.operator.num_qubits == 4
 
-def test_h2_pauli_terms_include_xx():
+def test_h2_has_offdiagonal_terms():
+    # A non-trivial molecular Hamiltonian must have hopping (X/Y) terms,
+    # not just diagonal Z terms. Labels are 4-char strings like "IIXX".
     h = load_hamiltonian("h2", data_dir=DATA_DIR)
     labels = [str(p) for p in h.operator.paulis]
-    assert "XX" in labels
+    assert any("X" in lbl or "Y" in lbl for lbl in labels)
 
-def test_lih_has_four_qubits():
+def test_h2_known_ground_state_loaded():
+    h = load_hamiltonian("h2", data_dir=DATA_DIR)
+    assert h.known_ground_state_hartree == pytest.approx(-1.137306, abs=1e-4)
+
+def test_lih_has_six_qubits():
     h = load_hamiltonian("lih", data_dir=DATA_DIR)
-    assert h.operator.num_qubits == 4
+    assert h.operator.num_qubits == 6
 
 def test_unknown_atom_raises():
     with pytest.raises(FileNotFoundError):
@@ -556,9 +518,11 @@ Expected: all 5 tests PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add data/ backend/pipeline/hamiltonians.py backend/tests/test_hamiltonians.py
-git commit -m "feat: pre-computed H2 and LiH Hamiltonians as JSON + loader"
+git add backend/pipeline/hamiltonians.py backend/tests/test_hamiltonians.py
+git commit -m "feat: Hamiltonian JSON loader for the VQE pipeline"
 ```
+
+(The `data/` JSON files and `generate_hamiltonians.py` are already committed by the controller.)
 
 ---
 
@@ -610,7 +574,15 @@ def test_result_has_one_rdm():
 def test_lih_ground_state_within_tolerance():
     h = load_hamiltonian("lih", data_dir=DATA_DIR)
     result = run_vqe(h)
-    assert abs(result.ground_state_energy - (-7.8823)) < 0.1  # 100 mHartree tolerance
+    assert abs(result.ground_state_energy - (-7.8631)) < 0.1  # 100 mHartree tolerance
+
+def test_convergence_history_is_monotonic():
+    # Best-so-far history must be non-increasing and end at the reported energy.
+    h = load_hamiltonian("h2", data_dir=DATA_DIR)
+    result = run_vqe(h)
+    hist = result.convergence_history
+    assert all(hist[i] >= hist[i + 1] - 1e-9 for i in range(len(hist) - 1))
+    assert hist[-1] == pytest.approx(result.ground_state_energy, abs=1e-9)
 ```
 
 - [ ] **Step 2: Run tests to confirm they fail**
@@ -626,13 +598,13 @@ Expected: `ModuleNotFoundError: No module named 'pipeline.vqe_runner'`
 
 ```python
 # backend/pipeline/vqe_runner.py
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import numpy as np
 import scipy.optimize as opt
 
 from qiskit.circuit.library import EfficientSU2
 from qiskit.quantum_info import SparsePauliOp, Statevector
-from qiskit_aer.primitives import Estimator
+from qiskit.primitives import StatevectorEstimator
 
 from .hamiltonians import HamiltonianData
 
@@ -640,100 +612,112 @@ from .hamiltonians import HamiltonianData
 @dataclass
 class VQEResult:
     atom_id: str
-    ground_state_energy: float          # in Hartree
+    ground_state_energy: float          # in Hartree (total energy; nuclear repulsion folded in)
     optimal_params: np.ndarray
-    convergence_history: list[float]    # energy at each optimizer iteration
+    convergence_history: list[float]    # best-so-far energy at each iteration (monotonic)
     one_rdm: np.ndarray                 # 1-particle reduced density matrix, shape (n, n)
     num_qubits: int
     num_iterations: int
     converged: bool
 
 
-def _build_ansatz(num_qubits: int, reps: int = 2) -> EfficientSU2:
-    """EfficientSU2 hardware-efficient ansatz."""
-    return EfficientSU2(num_qubits, reps=reps, entanglement="linear")
+def _build_ansatz(num_qubits: int, reps: int = 3):
+    """
+    EfficientSU2 hardware-efficient ansatz, decomposed to basis gates.
+
+    The decompose() call is REQUIRED: high-level library circuits like
+    EfficientSU2 are not directly executable by the estimator/statevector
+    backends in Qiskit 2.x — they must be lowered to basic gates first.
+    Decomposition preserves the free parameters.
+    """
+    return EfficientSU2(num_qubits, reps=reps, entanglement="linear").decompose()
 
 
 def _compute_one_rdm(ansatz, optimal_params: np.ndarray, num_qubits: int) -> np.ndarray:
     """
     Compute the 1-particle reduced density matrix from the optimal wavefunction.
-    gamma_pq = <psi| a†_p a_q |psi>  (occupation matrix in the qubit basis)
-    
-    We approximate this using the statevector: compute the expectation value of
-    the number operator n_p = (I - Z_p) / 2 on the diagonal, and inter-orbital
-    coherences on the off-diagonal.
+    gamma_pq = <psi| a†_p a_q |psi>  (occupation matrix in the qubit basis).
+
+    The DIAGONAL (orbital occupations, <n_p> = (1 - <Z_p>) / 2) is exact and is
+    the only part the binding-site extractor uses. The off-diagonal coherences
+    use the (<X_p X_q> + <Y_p Y_q>) / 4 approximation — illustrative only.
     """
     bound = ansatz.assign_parameters(optimal_params)
     sv = Statevector(bound)
-    
+
     rdm = np.zeros((num_qubits, num_qubits), dtype=complex)
     for p in range(num_qubits):
-        # Diagonal: orbital occupation <n_p> = (1 - <Z_p>) / 2
-        z_op = SparsePauliOp.from_sparse_list(
-            [("Z", [p], 1.0)], num_qubits=num_qubits
-        )
+        z_op = SparsePauliOp.from_sparse_list([("Z", [p], 1.0)], num_qubits=num_qubits)
         rdm[p, p] = (1.0 - sv.expectation_value(z_op).real) / 2.0
-        
-        # Off-diagonal: inter-orbital terms <a†_p a_q> = (<X_p X_q> + <Y_p Y_q>) / 4
+
         for q in range(p + 1, num_qubits):
-            xx_op = SparsePauliOp.from_sparse_list(
-                [("XX", [p, q], 1.0)], num_qubits=num_qubits
-            )
-            yy_op = SparsePauliOp.from_sparse_list(
-                [("YY", [p, q], 1.0)], num_qubits=num_qubits
-            )
+            xx_op = SparsePauliOp.from_sparse_list([("XX", [p, q], 1.0)], num_qubits=num_qubits)
+            yy_op = SparsePauliOp.from_sparse_list([("YY", [p, q], 1.0)], num_qubits=num_qubits)
             val = (sv.expectation_value(xx_op) + sv.expectation_value(yy_op)) / 4.0
             rdm[p, q] = val
             rdm[q, p] = val.conjugate()
-    
+
     return rdm.real
 
 
 def run_vqe(
     ham_data: HamiltonianData,
-    reps: int = 2,
+    reps: int = 3,
     optimizer: str = "COBYLA",
-    max_iter: int = 500,
+    max_iter: int = 1500,
 ) -> VQEResult:
     """
-    Run VQE on the given Hamiltonian using qiskit-aer Estimator and scipy optimizer.
-    Returns VQEResult including ground state energy, convergence history, and 1-RDM.
+    Run VQE on the given Hamiltonian using the exact StatevectorEstimator
+    (no shot noise) and a scipy optimizer. Returns VQEResult including the
+    ground-state energy, a monotonic best-so-far convergence history, and the 1-RDM.
+
+    Defaults (reps=3, max_iter=1500, COBYLA, seed 42) are tuned to reach
+    chemical accuracy on the shipped H2 (4q) and LiH (6q) Hamiltonians:
+    H2 -> ~0.000 Ha error, LiH -> ~0.001 Ha error.
     """
     n = ham_data.num_qubits
     ansatz = _build_ansatz(n, reps=reps)
-    estimator = Estimator()
-    
-    convergence_history: list[float] = []
-    
+    estimator = StatevectorEstimator()
+
+    raw_history: list[float] = []
+
     def cost_fn(params: np.ndarray) -> float:
-        job = estimator.run([(ansatz, ham_data.operator, params)])
-        energy = float(job.result()[0].data.evs)
-        convergence_history.append(energy)
+        result = estimator.run([(ansatz, ham_data.operator, params)]).result()
+        energy = float(result[0].data.evs)
+        raw_history.append(energy)
         return energy
-    
-    # Initial parameters: small random values near zero
+
+    # Deterministic initial parameters: small values near zero
     rng = np.random.default_rng(seed=42)
-    num_params = ansatz.num_parameters
-    x0 = rng.uniform(-0.1, 0.1, num_params)
-    
+    x0 = rng.uniform(-0.1, 0.1, ansatz.num_parameters)
+
     scipy_result = opt.minimize(
         cost_fn,
         x0,
         method=optimizer,
         options={"maxiter": max_iter, "rhobeg": 0.5},
     )
-    
+
+    # Best-so-far (monotonic non-increasing) history for a clean convergence chart.
+    best_history: list[float] = []
+    running_min = float("inf")
+    for e in raw_history:
+        running_min = min(running_min, e)
+        best_history.append(running_min)
+
+    best_energy = best_history[-1]
+    # Use the parameters that achieved the best energy seen (scipy.fun matches running_min).
     optimal_params = scipy_result.x
     one_rdm = _compute_one_rdm(ansatz, optimal_params, n)
-    
+
     return VQEResult(
         atom_id=ham_data.atom_id,
-        ground_state_energy=float(scipy_result.fun),
+        ground_state_energy=best_energy,
         optimal_params=optimal_params,
-        convergence_history=convergence_history,
+        convergence_history=best_history,
         one_rdm=one_rdm,
         num_qubits=n,
-        num_iterations=len(convergence_history),
+        num_iterations=len(best_history),
         converged=scipy_result.success,
     )
 ```
@@ -745,15 +729,13 @@ cd backend
 pytest tests/test_vqe_runner.py -v
 ```
 
-Expected: all 5 tests PASS. H2 test runs in under 30 seconds. LiH test may take 1-2 minutes.
-
-Note: if qiskit-aer throws a version warning about Qiskit 2.x, that is non-fatal.
+Expected: all 6 tests PASS. H2 test runs in ~15-20 seconds; LiH test in ~25-45 seconds. These are exact statevector simulations (no shot noise), so results are deterministic given seed 42.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add backend/pipeline/vqe_runner.py backend/tests/test_vqe_runner.py
-git commit -m "feat: VQE runner using qiskit-aer + scipy, returns energy + 1-RDM"
+git commit -m "feat: VQE runner using Qiskit StatevectorEstimator + scipy, returns energy + 1-RDM"
 ```
 
 ---
