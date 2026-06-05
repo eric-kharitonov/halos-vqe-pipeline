@@ -1,0 +1,71 @@
+{
+  "atom_id": "h2",
+  "description": "H2 at R=0.735 Angstrom, STO-3G, full 4-qubit Jordan-Wigner. Nuclear repulsion folded into identity term.",
+  "reference": "O'Malley et al. (2016), Physical Review X 6, 031007 (reference energy)",
+  "num_qubits": 4,
+  "nuclear_repulsion_energy": 0.0,
+  "pauli_terms": [
+    {
+      "pauli": "IIII",
+      "coeff": -0.09057892512451426
+    },
+    {
+      "pauli": "IIIZ",
+      "coeff": 0.17218394115353955
+    },
+    {
+      "pauli": "IIZI",
+      "coeff": 0.17218394115353947
+    },
+    {
+      "pauli": "IIZZ",
+      "coeff": 0.1689275415950936
+    },
+    {
+      "pauli": "IZII",
+      "coeff": -0.22575351264679455
+    },
+    {
+      "pauli": "IZIZ",
+      "coeff": 0.12091263557610636
+    },
+    {
+      "pauli": "IZZI",
+      "coeff": 0.16614543463377257
+    },
+    {
+      "pauli": "YXXY",
+      "coeff": 0.04523279905766621
+    },
+    {
+      "pauli": "XXYY",
+      "coeff": -0.04523279905766621
+    },
+    {
+      "pauli": "YYXX",
+      "coeff": -0.04523279905766621
+    },
+    {
+      "pauli": "XYYX",
+      "coeff": 0.04523279905766621
+    },
+    {
+      "pauli": "ZIII",
+      "coeff": -0.22575351264679455
+    },
+    {
+      "pauli": "ZIIZ",
+      "coeff": 0.16614543463377257
+    },
+    {
+      "pauli": "ZIZI",
+      "coeff": 0.12091263557610636
+    },
+    {
+      "pauli": "ZZII",
+      "coeff": 0.17464343234664637
+    }
+  ],
+  "known_ground_state_hartree": -1.137306,
+  "generator": "pennylane.qchem dhf (pure-Python HF), STO-3G"
+}

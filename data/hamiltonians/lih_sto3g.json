@@ -1,0 +1,259 @@
+{
+  "atom_id": "lih",
+  "description": "LiH at R=1.595 Angstrom, STO-3G, active space (2 electrons, 3 spatial orbitals) -> 6 qubits. Nuclear repulsion folded into identity term. Ground state is the active-space exact value.",
+  "reference": "Kandala et al. (2017), Nature 549, 242 (system reference)",
+  "num_qubits": 6,
+  "nuclear_repulsion_energy": 0.0,
+  "pauli_terms": [
+    {
+      "pauli": "IIIIII",
+      "coeff": -7.264068042990468
+    },
+    {
+      "pauli": "IIIIIZ",
+      "coeff": 0.026793016578516925
+    },
+    {
+      "pauli": "IIIIZI",
+      "coeff": 0.026793016578516925
+    },
+    {
+      "pauli": "IIIIZZ",
+      "coeff": 0.1219144513918359
+    },
+    {
+      "pauli": "IIIYZY",
+      "coeff": 0.012016576437641667
+    },
+    {
+      "pauli": "IIIXZX",
+      "coeff": 0.012016576437641667
+    },
+    {
+      "pauli": "IIIZII",
+      "coeff": -0.1456735703865345
+    },
+    {
+      "pauli": "IIIZIZ",
+      "coeff": 0.052684771719285706
+    },
+    {
+      "pauli": "IIIYIY",
+      "coeff": 0.012123732958353025
+    },
+    {
+      "pauli": "IIIXIX",
+      "coeff": 0.012123732958353025
+    },
+    {
+      "pauli": "IIIZZI",
+      "coeff": 0.05593826137543789
+    },
+    {
+      "pauli": "IIYZYI",
+      "coeff": 0.012016576437641667
+    },
+    {
+      "pauli": "IIYZYZ",
+      "coeff": 0.012123732958353025
+    },
+    {
+      "pauli": "IIXZXI",
+      "coeff": 0.012016576437641667
+    },
+    {
+      "pauli": "IIXZXZ",
+      "coeff": 0.012123732958353025
+    },
+    {
+      "pauli": "IIYXXY",
+      "coeff": 0.0032534896561521795
+    },
+    {
+      "pauli": "IIXXYY",
+      "coeff": -0.0032534896561521795
+    },
+    {
+      "pauli": "IIYYXX",
+      "coeff": -0.0032534896561521795
+    },
+    {
+      "pauli": "IIXYYX",
+      "coeff": 0.0032534896561521795
+    },
+    {
+      "pauli": "IIZIII",
+      "coeff": -0.1456735703865345
+    },
+    {
+      "pauli": "IIZIIZ",
+      "coeff": 0.05593826137543789
+    },
+    {
+      "pauli": "IIZYZY",
+      "coeff": -0.001854547292063107
+    },
+    {
+      "pauli": "IIZXZX",
+      "coeff": -0.001854547292063107
+    },
+    {
+      "pauli": "IIZIZI",
+      "coeff": 0.052684771719285706
+    },
+    {
+      "pauli": "IIYIYI",
+      "coeff": -0.0018545472920631068
+    },
+    {
+      "pauli": "IIXIXI",
+      "coeff": -0.0018545472920631068
+    },
+    {
+      "pauli": "IIZZII",
+      "coeff": 0.08448373589998293
+    },
+    {
+      "pauli": "IZIIII",
+      "coeff": -0.1615414495397025
+    },
+    {
+      "pauli": "IZIIIZ",
+      "coeff": 0.06174200525415908
+    },
+    {
+      "pauli": "IZIYZY",
+      "coeff": 0.003389927736498012
+    },
+    {
+      "pauli": "IZIXZX",
+      "coeff": 0.003389927736498012
+    },
+    {
+      "pauli": "IZIIZI",
+      "coeff": 0.06760453353971463
+    },
+    {
+      "pauli": "IZYZYI",
+      "coeff": -0.0014282243495089366
+    },
+    {
+      "pauli": "IZXZXI",
+      "coeff": -0.0014282243495089366
+    },
+    {
+      "pauli": "IZIZII",
+      "coeff": 0.06018148425875432
+    },
+    {
+      "pauli": "IZZIII",
+      "coeff": 0.07050093122594357
+    },
+    {
+      "pauli": "YXIIXY",
+      "coeff": 0.005862528285555544
+    },
+    {
+      "pauli": "XXIIYY",
+      "coeff": -0.005862528285555544
+    },
+    {
+      "pauli": "YYIIXX",
+      "coeff": -0.005862528285555544
+    },
+    {
+      "pauli": "XYIIYX",
+      "coeff": 0.005862528285555544
+    },
+    {
+      "pauli": "YXXZZY",
+      "coeff": 0.004818152086006949
+    },
+    {
+      "pauli": "XXYZZY",
+      "coeff": -0.004818152086006949
+    },
+    {
+      "pauli": "YYXZZX",
+      "coeff": -0.004818152086006949
+    },
+    {
+      "pauli": "XYYZZX",
+      "coeff": 0.004818152086006949
+    },
+    {
+      "pauli": "ZIIIII",
+      "coeff": -0.16154144953970256
+    },
+    {
+      "pauli": "ZIIIIZ",
+      "coeff": 0.06760453353971463
+    },
+    {
+      "pauli": "ZIIYZY",
+      "coeff": -0.0014282243495089366
+    },
+    {
+      "pauli": "ZIIXZX",
+      "coeff": -0.0014282243495089366
+    },
+    {
+      "pauli": "ZIIIZI",
+      "coeff": 0.06174200525415908
+    },
+    {
+      "pauli": "YXIXYI",
+      "coeff": -0.004818152086006949
+    },
+    {
+      "pauli": "YYIYYI",
+      "coeff": -0.004818152086006949
+    },
+    {
+      "pauli": "XXIXXI",
+      "coeff": -0.004818152086006949
+    },
+    {
+      "pauli": "XYIYXI",
+      "coeff": -0.004818152086006949
+    },
+    {
+      "pauli": "ZIYZYI",
+      "coeff": 0.003389927736498012
+    },
+    {
+      "pauli": "ZIXZXI",
+      "coeff": 0.003389927736498012
+    },
+    {
+      "pauli": "YXXYII",
+      "coeff": 0.010319446967189257
+    },
+    {
+      "pauli": "XXYYII",
+      "coeff": -0.010319446967189257
+    },
+    {
+      "pauli": "YYXXII",
+      "coeff": -0.010319446967189257
+    },
+    {
+      "pauli": "XYYXII",
+      "coeff": 0.010319446967189257
+    },
+    {
+      "pauli": "ZIIZII",
+      "coeff": 0.07050093122594357
+    },
+    {
+      "pauli": "ZIZIII",
+      "coeff": 0.06018148425875432
+    },
+    {
+      "pauli": "ZZIIII",
+      "coeff": 0.07823636352122482
+    }
+  ],
+  "known_ground_state_hartree": -7.863078,
+  "generator": "pennylane.qchem dhf (pure-Python HF), STO-3G"
+}
