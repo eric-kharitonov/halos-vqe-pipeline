@@ -27,7 +27,12 @@ atom  →  Hamiltonian  →  VQE (Qiskit)  →  1-RDM occupancies  →  binding 
    coordination sites. Their count picks the geometry (linear, tetrahedral, …).
 3. **Protein design** (`protein_designer.py`) — maps donor preference → residues
    (O→D/E/S/T/Y, N→H/N/Q, S→C/M), placed at helix positions 0, 4, 8, … → FASTA.
-4. **Handoff** (`handoff.py`) — bundles VQE energy, geometry, sequence, confidence, and
+4. **QAOA search** (`protein_search.py`, optional) — instead of placing residues
+   deterministically, *searches* a small peptide space with the Quantum Approximate
+   Optimization Algorithm (`QAOAAnsatz` over a diagonal cost Hamiltonian). Brute-force
+   validated to reach the true optimum on the 16/64-candidate spaces. Endpoint
+   `GET /pipeline/qaoa-search?binding_strength=…&n_residues=…`.
+5. **Handoff** (`handoff.py`) — bundles VQE energy, geometry, sequence, confidence, and
    next-step lab instructions into one JSON.
 
 ## Atoms
@@ -94,5 +99,8 @@ This is a **proof-of-concept simulator**, not a validated drug-design tool:
 - The binding-site → geometry → residue mapping is a principled heuristic, not a docking
   or folding calculation. The FASTA output is meant to be validated downstream with
   AlphaFold2 / RFdiffusion before any wet-lab work (see the handoff JSON's `next_step`).
+- The QAOA search uses a transparent surrogate cost (donor strength vs. site deficiency +
+  adjacency penalty), not an ab-initio binding energy. It's a faithful demonstration of
+  the *algorithm* on a real combinatorial encoding, not a quantitative binding predictor.
 - The 1-RDM off-diagonal terms use an approximation; only the diagonal occupancies (which
   are exact) drive the binding-site logic.
