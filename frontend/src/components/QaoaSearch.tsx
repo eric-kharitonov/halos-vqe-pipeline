@@ -4,11 +4,14 @@ import { runQaoaSearch, type QaoaResult } from '../api/client'
 interface Props {
   bindingStrength: number
   coordinationNumber: number
+  atomId: string
+  geometry: string
+  onResult: (result: QaoaResult | null) => void
 }
 
 type Stage = 'idle' | 'running' | 'done' | 'error'
 
-export default function QaoaSearch({ bindingStrength, coordinationNumber }: Props) {
+export default function QaoaSearch({ bindingStrength, coordinationNumber, atomId, geometry, onResult }: Props) {
   const [stage, setStage] = useState<Stage>('idle')
   const [result, setResult] = useState<QaoaResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -18,9 +21,9 @@ export default function QaoaSearch({ bindingStrength, coordinationNumber }: Prop
 
   const run = () => {
     setStage('running')
-    runQaoaSearch(bindingStrength, nResidues)
-      .then(r => { setResult(r); setStage('done') })
-      .catch(e => { setError(e.message); setStage('error') })
+    runQaoaSearch(bindingStrength, nResidues, atomId, geometry)
+      .then(r => { setResult(r); setStage('done'); onResult(r) })
+      .catch(e => { setError(e.message); setStage('error'); onResult(null) })
   }
 
   const maxProb = result ? Math.max(...result.ranked_candidates.map(c => c.probability)) : 1

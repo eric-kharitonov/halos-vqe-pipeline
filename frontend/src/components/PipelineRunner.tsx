@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { runPipeline, type PipelineResult } from '../api/client'
+import { runPipeline, type PipelineResult, type QaoaResult } from '../api/client'
 import VQEChart from './VQEChart'
 import BindingSites from './BindingSites'
 import ProteinOutput from './ProteinOutput'
@@ -17,6 +17,7 @@ export default function PipelineRunner({ atomId, onReset }: Props) {
   const [stage, setStage] = useState<Stage>('running')
   const [result, setResult] = useState<PipelineResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [qaoaResult, setQaoaResult] = useState<QaoaResult | null>(null)
 
   useEffect(() => {
     runPipeline(atomId)
@@ -76,8 +77,15 @@ export default function PipelineRunner({ atomId, onReset }: Props) {
           <QaoaSearch
             bindingStrength={result.binding_confidence}
             coordinationNumber={result.coordination_number}
+            atomId={result.atom_id}
+            geometry={result.geometry}
+            onResult={setQaoaResult}
           />
-          <HandoffExport handoffJson={result.handoff_json} atomId={result.atom_id} />
+          <HandoffExport
+            handoffJson={result.handoff_json}
+            atomId={result.atom_id}
+            qaoaBlock={qaoaResult?.handoff_block ?? null}
+          />
         </div>
       )}
     </div>

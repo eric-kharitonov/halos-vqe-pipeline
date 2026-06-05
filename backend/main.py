@@ -6,7 +6,7 @@ from pipeline.atoms import get_atom, list_atoms
 from pipeline.hamiltonians import load_hamiltonian
 from pipeline.vqe_runner import run_vqe
 from pipeline.binding_sites import extract_binding_sites
-from pipeline.protein_designer import design_protein
+from pipeline.protein_designer import design_protein, scaffold_binding_residues
 from pipeline.protein_search import run_qaoa_search
 from pipeline.handoff import build_handoff
 
@@ -116,27 +116,64 @@ def run_full_pipeline(atom_id: str):
 
 
 @app.get("/pipeline/qaoa-search")
-def qaoa_search(binding_strength: float, n_residues: int = 2):
+def qaoa_search(
+    binding_strength: float,
+    n_residues: int = 2,
+    atom_id: str = "h2",
+    geometry: str = "linear",
+):
     """QAOA search over peptide space for the best binder against a binding site.
 
     Takes the electron-deficiency (binding_strength) from a completed VQE run so it does
-    not re-run VQE. Returns ranked candidates plus the brute-force optimum for validation.
+    not re-run VQE. Returns ranked candidates, the brute-force optimum for validation, and
+    a self-contained `handoff_block` (the QAOA-recommended sequence scaffolded into a full
+    FASTA) ready to be merged into the bio-team handoff package.
     """
     result = run_qaoa_search(binding_strength=binding_strength, n_residues=n_residues)
+
+    # Turn QAOA's chosen core residues into a complete, AlphaFold-ready sequence.
+    core_residues = list(result.best_sequence)
+    scaffolded = scaffold_binding_residues(core_residues)
+    fasta = (
+        f">HALOS_{atom_id.upper()}_qaoa_binding_protein | "
+        f"coord={geometry} | core={result.best_sequence} | search=qaoa | "
+        f"reached_optimum={result.found_optimum}\n{scaffolded}"
+    )
+
+    ranked = [
+        {"sequence": c.sequence, "cost": c.cost, "probability": c.probability}
+        for c in result.ranked_candidates
+    ]
+
+    handoff_block = {
+        "method": "QAOA (Quantum Approximate Optimization Algorithm)",
+        "recommended_core_residues": core_residues,
+        "recommended_sequence": scaffolded,
+        "recommended_fasta": fasta,
+        "best_cost": result.best_cost,
+        "reached_global_optimum": result.found_optimum,
+        "brute_force_optimum": result.brute_force_optimum,
+        "brute_force_cost": result.brute_force_cost,
+        "search_space_size": result.search_space_size,
+        "n_qubits": result.n_qubits,
+        "qaoa_reps": result.reps,
+        "ranked_alternatives": ranked,
+    }
+
     return {
         "n_residues": result.n_residues,
         "n_qubits": result.n_qubits,
         "reps": result.reps,
         "search_space_size": result.search_space_size,
         "alphabet": result.alphabet,
-        "ranked_candidates": [
-            {"sequence": c.sequence, "cost": c.cost, "probability": c.probability}
-            for c in result.ranked_candidates
-        ],
+        "ranked_candidates": ranked,
         "best_sequence": result.best_sequence,
         "best_cost": result.best_cost,
         "brute_force_optimum": result.brute_force_optimum,
         "brute_force_cost": result.brute_force_cost,
         "found_optimum": result.found_optimum,
         "convergence_history": result.convergence_history,
+        "recommended_sequence": scaffolded,
+        "recommended_fasta": fasta,
+        "handoff_block": handoff_block,
     }

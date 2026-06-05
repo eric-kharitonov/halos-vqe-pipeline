@@ -47,6 +47,9 @@ export interface QaoaResult {
   brute_force_cost: number
   found_optimum: boolean
   convergence_history: number[]
+  recommended_sequence: string
+  recommended_fasta: string
+  handoff_block: Record<string, unknown>
 }
 
 const BASE = '/api'
@@ -66,10 +69,17 @@ export async function runPipeline(atomId: string): Promise<PipelineResult> {
   return r.json()
 }
 
-export async function runQaoaSearch(bindingStrength: number, nResidues: number): Promise<QaoaResult> {
+export async function runQaoaSearch(
+  bindingStrength: number,
+  nResidues: number,
+  atomId: string,
+  geometry: string,
+): Promise<QaoaResult> {
   const params = new URLSearchParams({
     binding_strength: String(bindingStrength),
     n_residues: String(nResidues),
+    atom_id: atomId,
+    geometry,
   })
   const r = await fetch(`${BASE}/pipeline/qaoa-search?${params}`)
   if (!r.ok) {

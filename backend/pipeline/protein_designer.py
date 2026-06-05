@@ -43,6 +43,14 @@ def _build_sequence(binding_residues: list[str]) -> str:
     return "".join(sequence)
 
 
+def scaffold_binding_residues(binding_residues: list[str]) -> str:
+    """Public: place a list of binding residues on the alpha-helical scaffold.
+
+    Used to turn QAOA-selected core residues into a full, AlphaFold-ready sequence.
+    """
+    return _build_sequence(binding_residues)
+
+
 def _geometry_to_notes(geometry: CoordinationGeometry, coord_number: int) -> str:
     notes_map = {
         CoordinationGeometry.LINEAR: "Linear geometry (2 sites). Simple binding mode.",

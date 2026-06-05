@@ -2,7 +2,15 @@ import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import pytest
 from pipeline.binding_sites import CoordinationResult, CoordinationGeometry
-from pipeline.protein_designer import design_protein, ProteinDesignResult
+from pipeline.protein_designer import design_protein, ProteinDesignResult, scaffold_binding_residues
+
+
+def test_scaffold_binding_residues_contains_residues():
+    seq = scaffold_binding_residues(["D", "E"])
+    assert seq[0] == "D"      # first binding residue at helix position 0
+    assert "E" in seq
+    assert len(seq) >= 8      # scaffolded to a full helix turn past the last residue
+
 
 def _coord_result(coord_number: int, geometry: CoordinationGeometry, donors: list[str], atom_id: str = "test"):
     return CoordinationResult(

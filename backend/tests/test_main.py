@@ -47,3 +47,19 @@ def test_qaoa_search_endpoint():
     assert data["found_optimum"] is True
     assert data["best_cost"] == pytest.approx(data["brute_force_cost"], abs=1e-6)
     assert len(data["ranked_candidates"]) > 0
+
+
+def test_qaoa_search_returns_handoff_block():
+    r = client.get(
+        "/pipeline/qaoa-search",
+        params={"binding_strength": 0.99, "n_residues": 2, "atom_id": "h2", "geometry": "linear"},
+        timeout=120,
+    )
+    assert r.status_code == 200
+    block = r.json()["handoff_block"]
+    assert block["recommended_fasta"].startswith(">")
+    assert block["reached_global_optimum"] is True
+    # The scaffolded sequence must contain QAOA's chosen core residues.
+    for residue in block["recommended_core_residues"]:
+        assert residue in block["recommended_sequence"]
+    assert len(block["ranked_alternatives"]) > 0
