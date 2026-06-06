@@ -1,5 +1,8 @@
 # HALOS — Quantum Bioremediation Pipeline Tool
 
+**▶ Live demo: https://halos-vqe-pipeline.onrender.com**
+*(free tier — the first request after it's been idle takes ~30–60 s to wake)*
+
 Pick a target atom → run **Qiskit VQE** to find its ground state and identify the
 electron-deficient "weak links" (empty coordination orbitals) → **design a protein**
 with the right metal-coordinating residues, in the right geometry, to bind those sites →
