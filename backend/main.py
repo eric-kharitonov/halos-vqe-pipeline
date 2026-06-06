@@ -1,6 +1,7 @@
 import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from pipeline.atoms import get_atom, list_atoms, AtomConfig
 from pipeline.hamiltonians import load_hamiltonian
@@ -54,12 +55,12 @@ def health():
     return {"status": "ok"}
 
 
-@app.get("/atoms")
+@app.get("/api/atoms")
 def get_atoms():
     return [_serialize_atom(a) for a in list_atoms()]
 
 
-@app.get("/atoms/{atom_id}")
+@app.get("/api/atoms/{atom_id}")
 def get_single_atom(atom_id: str):
     try:
         a = get_atom(atom_id)
@@ -68,7 +69,7 @@ def get_single_atom(atom_id: str):
     return _serialize_atom(a)
 
 
-@app.get("/pipeline/run/{atom_id}")
+@app.get("/api/pipeline/run/{atom_id}")
 def run_full_pipeline(atom_id: str):
     """Run the pipeline as far as the target's tier allows.
 
@@ -140,7 +141,7 @@ def run_full_pipeline(atom_id: str):
     }
 
 
-@app.get("/pipeline/fold")
+@app.get("/api/pipeline/fold")
 def fold(sequence: str):
     """Predict the 3D fold of a sequence with ESMFold; return pLDDT confidence + PDB.
 
@@ -164,7 +165,7 @@ def fold(sequence: str):
     }
 
 
-@app.get("/pipeline/prime-edit")
+@app.get("/api/pipeline/prime-edit")
 def prime_edit(protein: str):
     """Design the prime edit that writes the protein's gene into D. radiodurans.
 
@@ -192,7 +193,7 @@ def prime_edit(protein: str):
     }
 
 
-@app.get("/pipeline/qaoa-search")
+@app.get("/api/pipeline/qaoa-search")
 def qaoa_search(
     binding_strength: float,
     n_residues: int = 2,
@@ -254,3 +255,12 @@ def qaoa_search(
         "recommended_fasta": fasta,
         "handoff_block": handoff_block,
     }
+
+
+# --- Serve the built frontend (single-service deploy) ------------------------
+# In production the Vite build lives at frontend/dist; mount it at "/" AFTER the
+# API routes above so /api/* and /health resolve first. In local dev there is no
+# dist (Vite serves the SPA and proxies /api here), so this is skipped.
+_FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+if os.path.isdir(_FRONTEND_DIST):
+    app.mount("/", StaticFiles(directory=_FRONTEND_DIST, html=True), name="frontend")

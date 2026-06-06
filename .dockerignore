@@ -1,0 +1,22 @@
+# Keep the Docker build context small + reproducible.
+.git
+**/node_modules
+frontend/dist
+frontend/.vite
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.venv
+venv
+env
+
+# Local-only / throwaway artifacts
+.claude
+.gstack
+design-system-src
+*.png
+*.log
+
+# The original Perplexity mockup at repo root (not part of the real app)
+index.html
+assets

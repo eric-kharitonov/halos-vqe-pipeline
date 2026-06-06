@@ -1,0 +1,11 @@
+# Render Blueprint — one Docker web service that builds the frontend and serves it
+# together with the FastAPI pipeline API. Deploy: Render dashboard -> New -> Blueprint
+# -> connect the halos-vqe-pipeline repo. Render reads this file.
+services:
+  - type: web
+    name: halos-vqe-pipeline
+    runtime: docker
+    plan: free            # free spins down after ~15 min idle (cold start ~30-60s)
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true      # rebuild on every push to the default branch

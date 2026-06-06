@@ -11,7 +11,7 @@ def test_health():
     assert r.status_code == 200
 
 def test_list_atoms():
-    r = client.get("/atoms")
+    r = client.get("/api/atoms")
     assert r.status_code == 200
     atoms = r.json()
     assert isinstance(atoms, list)
@@ -24,18 +24,18 @@ def test_list_atoms():
     assert h2["badge"] == "REAL VQE"
 
 def test_get_single_atom():
-    r = client.get("/atoms/h2")
+    r = client.get("/api/atoms/h2")
     assert r.status_code == 200
     data = r.json()
     assert data["symbol"] == "H₂"
     assert data["runs_vqe"] is True
 
 def test_get_unknown_atom_returns_404():
-    r = client.get("/atoms/xyz_unknown")
+    r = client.get("/api/atoms/xyz_unknown")
     assert r.status_code == 404
 
 def test_full_pipeline_h2():
-    r = client.get("/pipeline/run/h2", timeout=120)
+    r = client.get("/api/pipeline/run/h2", timeout=120)
     assert r.status_code == 200
     data = r.json()
     assert data["map_source"] == "vqe"
@@ -44,12 +44,12 @@ def test_full_pipeline_h2():
     assert len(data["foldable_construct"]) >= 36
 
 def test_locked_atom_returns_422():
-    r = client.get("/pipeline/run/u")
+    r = client.get("/api/pipeline/run/u")
     assert r.status_code == 422
 
 def test_proxy_runs_downstream_from_literature():
     # Cs⁺ skips VQE but still produces a design, marked source=literature.
-    r = client.get("/pipeline/run/cs", timeout=60)
+    r = client.get("/api/pipeline/run/cs", timeout=60)
     assert r.status_code == 200
     data = r.json()
     assert data["map_source"] == "literature"
@@ -60,7 +60,7 @@ def test_proxy_runs_downstream_from_literature():
 
 def test_full_pipeline_tritium_toy_vqe():
     # Tritium is the toy 2-qubit VQE tier — runs a real (illustrative) VQE.
-    r = client.get("/pipeline/run/t", timeout=120)
+    r = client.get("/api/pipeline/run/t", timeout=120)
     assert r.status_code == 200
     data = r.json()
     assert data["map_source"] == "vqe"
@@ -70,12 +70,12 @@ def test_full_pipeline_tritium_toy_vqe():
 
 def test_fold_bad_input_returns_400():
     # Non-standard residues are the client's fault -> 400, not a 502 (service) error.
-    r = client.get("/pipeline/fold", params={"sequence": "ZZZ123"})
+    r = client.get("/api/pipeline/fold", params={"sequence": "ZZZ123"})
     assert r.status_code == 400
 
 
 def test_prime_edit_valid_returns_200():
-    r = client.get("/pipeline/prime-edit", params={"protein": "DEALKALAE"})
+    r = client.get("/api/pipeline/prime-edit", params={"protein": "DEALKALAE"})
     assert r.status_code == 200
     data = r.json()
     assert data["gene_dna"].startswith("ATG")
@@ -83,19 +83,19 @@ def test_prime_edit_valid_returns_200():
 
 
 def test_prime_edit_bad_input_returns_400():
-    r = client.get("/pipeline/prime-edit", params={"protein": "DEZ1"})
+    r = client.get("/api/pipeline/prime-edit", params={"protein": "DEZ1"})
     assert r.status_code == 400
 
 
 def test_proxy_fasta_not_labelled_quantum():
     # The downloaded design for a proxy must not claim a VQE provenance it never had.
-    r = client.get("/pipeline/run/cs", timeout=60)
+    r = client.get("/api/pipeline/run/cs", timeout=60)
     assert r.status_code == 200
     assert "generated=literature-coordination" in r.json()["fasta"]
 
 
 def test_qaoa_search_endpoint():
-    r = client.get("/pipeline/qaoa-search", params={"binding_strength": 0.99, "n_residues": 2}, timeout=120)
+    r = client.get("/api/pipeline/qaoa-search", params={"binding_strength": 0.99, "n_residues": 2}, timeout=120)
     assert r.status_code == 200
     data = r.json()
     assert data["search_space_size"] == 16
@@ -106,7 +106,7 @@ def test_qaoa_search_endpoint():
 
 def test_qaoa_search_returns_handoff_block():
     r = client.get(
-        "/pipeline/qaoa-search",
+        "/api/pipeline/qaoa-search",
         params={"binding_strength": 0.99, "n_residues": 2, "atom_id": "h2", "geometry": "linear"},
         timeout=120,
     )

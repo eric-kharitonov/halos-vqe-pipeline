@@ -88,11 +88,12 @@ pip install -r requirements.txt          # fastapi, uvicorn, pydantic, numpy, sc
 pip install qiskit                        # not pinned in requirements; installed globally
 python -m uvicorn main:app --port 8000
 ```
-- `GET /atoms` — list all targets (with tier/badge metadata)
-- `GET /pipeline/run/{atom_id}` — run the pipeline as far as the tier allows (e.g. `/pipeline/run/h2`, `/pipeline/run/cs`)
-- `GET /pipeline/qaoa-search?...` — QAOA peptide search
-- `GET /pipeline/fold?sequence=...` — ESMFold structure prediction (400 on bad input, 502 if the service is down)
-- `GET /pipeline/prime-edit?protein=...` — prime-edit / pegRNA design (400 on a non-standard sequence)
+- `GET /api/atoms` — list all targets (with tier/badge metadata)
+- `GET /api/pipeline/run/{atom_id}` — run the pipeline as far as the tier allows (e.g. `/api/pipeline/run/h2`, `/api/pipeline/run/cs`)
+- `GET /api/pipeline/qaoa-search?...` — QAOA peptide search
+- `GET /api/pipeline/fold?sequence=...` — ESMFold structure prediction (400 on bad input, 502 if the service is down)
+- `GET /api/pipeline/prime-edit?protein=...` — prime-edit / pegRNA design (400 on a non-standard sequence)
+- `GET /health` — liveness probe (used by Render)
 
 ### Frontend
 ```bash
@@ -108,6 +109,25 @@ protein, and download the handoff package.
 cd backend
 python -m pytest -m "not network"   # 71 offline tests (~4 min; the VQE/QAOA tests dominate)
 python -m pytest tests/ -v          # +1 live ESMFold test (skips if the service is down)
+```
+
+---
+
+## Deploy (single service)
+
+The whole app — the React build **and** the FastAPI pipeline — ships as one container.
+A multi-stage `Dockerfile` builds the frontend, then a Python image installs the backend,
+copies the build + committed data, and serves everything from one origin: the SPA at `/`,
+the API under `/api/*`, health at `/health`.
+
+On **Render**: New → Blueprint → connect this repo (`render.yaml` is read automatically).
+The free tier spins down after ~15 min idle, so the first request after a pause waits
+~30–60 s while it wakes and reloads Qiskit.
+
+Local production-style run (no Docker needed):
+```bash
+cd frontend && npm run build          # -> frontend/dist
+cd ../backend && uvicorn main:app     # serves dist + /api on http://localhost:8000
 ```
 
 ---
