@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 from fastapi import FastAPI, HTTPException
@@ -47,6 +48,36 @@ def _save_pipeline_cache(atom_id: str, result: dict) -> None:
     try:
         with open(_pipeline_cache_path(atom_id), "w", encoding="utf-8") as f:
             json.dump(result, f)
+    except OSError:
+        pass
+
+
+# QAOA search is also deterministic per (params); cache it the same way so the live
+# demo's "RUN QAOA SEARCH" is instant instead of ~130s on a throttled free host.
+QAOA_CACHE_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "qaoa")
+
+
+def _qaoa_cache_path(binding_strength: float, n_residues: int, atom_id: str, geometry: str) -> str:
+    raw = f"{atom_id}|{n_residues}|{binding_strength:.6f}|{geometry}"
+    return os.path.join(QAOA_CACHE_DIR, hashlib.sha1(raw.encode()).hexdigest() + ".json")
+
+
+def _load_qaoa_cache(*key) -> dict | None:
+    path = _qaoa_cache_path(*key)
+    if os.path.exists(path):
+        try:
+            with open(path, encoding="utf-8") as f:
+                return json.load(f)
+        except (OSError, ValueError):
+            return None
+    return None
+
+
+def _save_qaoa_cache(response: dict, *key) -> None:
+    os.makedirs(QAOA_CACHE_DIR, exist_ok=True)
+    try:
+        with open(_qaoa_cache_path(*key), "w", encoding="utf-8") as f:
+            json.dump(response, f)
     except OSError:
         pass
 
@@ -249,6 +280,10 @@ def qaoa_search(
     a self-contained `handoff_block` (the QAOA-recommended sequence scaffolded into a full
     FASTA) ready to be merged into the bio-team handoff package.
     """
+    cached = _load_qaoa_cache(binding_strength, n_residues, atom_id, geometry)
+    if cached is not None:
+        return cached
+
     result = run_qaoa_search(binding_strength=binding_strength, n_residues=n_residues)
 
     # Turn QAOA's chosen core residues into a complete, AlphaFold-ready sequence.
@@ -280,7 +315,7 @@ def qaoa_search(
         "ranked_alternatives": ranked,
     }
 
-    return {
+    response = {
         "n_residues": result.n_residues,
         "n_qubits": result.n_qubits,
         "reps": result.reps,
@@ -297,6 +332,8 @@ def qaoa_search(
         "recommended_fasta": fasta,
         "handoff_block": handoff_block,
     }
+    _save_qaoa_cache(response, binding_strength, n_residues, atom_id, geometry)
+    return response
 
 
 # --- Serve the built frontend (single-service deploy) ------------------------
