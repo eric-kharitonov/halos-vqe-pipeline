@@ -1,3 +1,4 @@
+import json
 import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +19,37 @@ from pipeline.folding import fold_sequence, FoldingError, InvalidSequenceError
 from pipeline.prime_editing import design_prime_edit
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "hamiltonians")
+
+# Deterministic VQE pipeline results (seed=42) are cached to disk so the live demo is
+# instant even on a CPU-throttled host where a fresh VQE can take minutes. The cached
+# payload IS the genuine computed result (same idea as the ESMFold fold cache), not a
+# substitute. Regenerate with `python precache_pipeline.py`.
+PIPELINE_CACHE_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "pipeline")
+
+
+def _pipeline_cache_path(atom_id: str) -> str:
+    return os.path.join(PIPELINE_CACHE_DIR, f"{atom_id}.json")
+
+
+def _load_pipeline_cache(atom_id: str) -> dict | None:
+    path = _pipeline_cache_path(atom_id)
+    if os.path.exists(path):
+        try:
+            with open(path, encoding="utf-8") as f:
+                return json.load(f)
+        except (OSError, ValueError):
+            return None
+    return None
+
+
+def _save_pipeline_cache(atom_id: str, result: dict) -> None:
+    os.makedirs(PIPELINE_CACHE_DIR, exist_ok=True)
+    try:
+        with open(_pipeline_cache_path(atom_id), "w", encoding="utf-8") as f:
+            json.dump(result, f)
+    except OSError:
+        pass
+
 
 app = FastAPI(title="HALOS VQE Pipeline", version="0.1.0")
 
@@ -90,6 +122,13 @@ def run_full_pipeline(atom_id: str):
                    "classical or current quantum simulation. Needs fault-tolerant hardware.",
         )
 
+    # Serve a cached VQE result instantly if we have one (deterministic, seed=42) — keeps
+    # the live demo fast on CPU-throttled hosts where a fresh VQE run can take minutes.
+    if atom.runs_vqe:
+        cached = _load_pipeline_cache(atom_id)
+        if cached is not None:
+            return cached
+
     if atom.runs_vqe:
         try:
             ham_data = load_hamiltonian(atom_id, data_dir=DATA_DIR)
@@ -118,7 +157,7 @@ def run_full_pipeline(atom_id: str):
         protein=protein_result,
     )
 
-    return {
+    result = {
         "atom_id": atom_id,
         "tier": atom.tier.value,
         "map_source": coord_result.source,            # "vqe" or "literature"
@@ -139,6 +178,9 @@ def run_full_pipeline(atom_id: str):
         "binding_confidence": handoff.binding_confidence,
         "handoff_json": handoff.to_json(),
     }
+    if atom.runs_vqe:
+        _save_pipeline_cache(atom_id, result)
+    return result
 
 
 @app.get("/api/pipeline/fold")
