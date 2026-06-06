@@ -2,6 +2,7 @@ import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import pytest
 from fastapi.testclient import TestClient
+import main
 from main import app
 
 client = TestClient(app)
@@ -94,7 +95,9 @@ def test_proxy_fasta_not_labelled_quantum():
     assert "generated=literature-coordination" in r.json()["fasta"]
 
 
-def test_qaoa_search_endpoint():
+def test_qaoa_search_endpoint(monkeypatch, tmp_path):
+    # Exercise the real QAOA compute, and keep its cache write out of the real data/qaoa/.
+    monkeypatch.setattr(main, "QAOA_CACHE_DIR", str(tmp_path))
     r = client.get("/api/pipeline/qaoa-search", params={"binding_strength": 0.99, "n_residues": 2}, timeout=120)
     assert r.status_code == 200
     data = r.json()
@@ -104,7 +107,8 @@ def test_qaoa_search_endpoint():
     assert len(data["ranked_candidates"]) > 0
 
 
-def test_qaoa_search_returns_handoff_block():
+def test_qaoa_search_returns_handoff_block(monkeypatch, tmp_path):
+    monkeypatch.setattr(main, "QAOA_CACHE_DIR", str(tmp_path))
     r = client.get(
         "/api/pipeline/qaoa-search",
         params={"binding_strength": 0.99, "n_residues": 2, "atom_id": "h2", "geometry": "linear"},
